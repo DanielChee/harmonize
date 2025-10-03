@@ -1,3 +1,4 @@
+// Pass: 
 import { Tabs } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -17,7 +18,7 @@ export default function TabsLayout() {
         options={{
           title: "Match",
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="heart-outline" size={size} color={color} />
+            <MaterialCommunityIcons name="account-multiple-outline" size={size} color={color} />
           ),
         }}
       />
@@ -26,7 +27,7 @@ export default function TabsLayout() {
         options={{
           title: "Concerts",
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="music-circle-outline" size={size} color={color} />
+            <MaterialCommunityIcons name="ticket-confirmation-outline" size={size} color={color} />
           ),
         }}
       />
