@@ -6,6 +6,7 @@ export default function TabsLayout() {
     <Tabs
       initialRouteName="match"
       screenOptions={{
+        headerShown: false,
         headerTitleAlign: "center",
         tabBarActiveTintColor: "#6C5CE7",
         tabBarInactiveTintColor: "#999",
