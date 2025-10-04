@@ -1,3 +1,3 @@
-export { default } from "../../screens/Match";
+export { default } from "../../src/features/matching";
 
-// To edit this page, navigate to ~/screens/Match/index.tsx
+// To edit this page, navigate to ~/src/features/matching/index.tsx

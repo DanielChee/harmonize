@@ -1,3 +1,3 @@
-export { default } from "../../screens/Chat";
+export { default } from "../../src/features/chat";
 
-// To edit this page, navigate to ~/screens/Chat/index.tsx
+// To edit this page, navigate to ~/src/features/chat/index.tsx

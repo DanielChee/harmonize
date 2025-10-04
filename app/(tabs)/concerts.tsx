@@ -1,3 +1,3 @@
-export { default } from "../../screens/Concerts";
+export { default } from "../../src/features/concerts";
 
-// To edit this page, navigate to ~/screens/Concerts/index.tsx
+// To edit this page, navigate to ~/src/features/concerts/index.tsx
