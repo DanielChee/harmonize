@@ -41,7 +41,7 @@ export const UserCard: React.FC<UserCardProps> = ({
 
   if (compact) {
     return (
-      <Card variant="elevated" padding="small" onPress={onPress}>
+      <Card variant="elevated" padding="sm" onPress={onPress}>
         <View style={styles.compactContainer}>
           <Image
             source={{ uri: user.profile_picture_url || 'https://via.placeholder.com/50' }}
@@ -58,7 +58,7 @@ export const UserCard: React.FC<UserCardProps> = ({
   }
 
   return (
-    <Card variant="elevated" padding="none" onPress={onPress}>
+    <Card variant="elevated" padding="xs" onPress={onPress}>
       <View style={styles.container}>
         {/* Profile Image */}
         <View style={styles.imageContainer}>

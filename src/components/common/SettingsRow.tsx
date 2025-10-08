@@ -91,22 +91,22 @@ export const SettingsRow: React.FC<SettingsRowProps> = ({
     styles.container,
     disabled && styles.disabled,
     style,
-  ];
+  ].filter(Boolean) as ViewStyle[];
 
   const labelStyle: TextStyle[] = [
     styles.label,
     disabled && styles.textDisabled,
-  ];
+  ].filter(Boolean) as TextStyle[];
 
   const descriptionStyle: TextStyle[] = [
     styles.description,
     disabled && styles.textDisabled,
-  ];
+  ].filter(Boolean) as TextStyle[];
 
   const valueStyle: TextStyle[] = [
     styles.value,
     disabled && styles.textDisabled,
-  ];
+  ].filter(Boolean) as TextStyle[];
 
   return (
     <TouchableOpacity

@@ -75,7 +75,7 @@ export const Card: React.FC<CardProps> = ({
     variant === 'outlined' && styles.outlined,
     { padding: SPACING[padding] },
     style,
-  ];
+  ].filter(Boolean) as ViewStyle[];
 
   // TODO: If icon or badge provided, use horizontal layout
   const hasIconOrBadge = icon || badge;

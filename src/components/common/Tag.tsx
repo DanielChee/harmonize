@@ -81,13 +81,13 @@ export const Tag: React.FC<TagProps> = ({
     readOnly && styles.readOnly,
     disabled && styles.disabled,
     style,
-  ];
+  ].filter(Boolean) as ViewStyle[];
 
   const textStyle: TextStyle[] = [
     styles.text,
     selected ? styles.textSelected : styles.textUnselected,
     disabled && styles.textDisabled,
-  ];
+  ].filter(Boolean) as TextStyle[];
 
   // Render as TouchableOpacity if interactive, View if not
   const Component = isInteractive ? TouchableOpacity : ({ children, ...props }: any) => (
