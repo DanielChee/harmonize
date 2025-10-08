@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text } from "react-native";
-import { supabase } from "../src/services/supabase/supabase";
+import { supabase } from "@services/supabase";
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from "uuid";
 
