@@ -4,10 +4,11 @@
 
 import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
-import { Card, Tag } from '@components';
+import { Card, Tag, LookingForSection } from '@components';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { User, SpotifyData } from '@types';
+import type { Concert } from '@components/profile/LookingForSection';
 
 interface ProfileCardHighProps {
   user: User;
@@ -52,6 +53,17 @@ export const ProfileCardHigh: React.FC<ProfileCardHighProps> = ({ user, spotifyD
           )}
         </View>
       </View>
+
+      {/* Looking For Section - Concert Buddy Search */}
+      <LookingForSection
+        concert={{
+          id: '1',
+          artist: 'Example Artist',
+          venue: 'Example Venue',
+          date: 'Dec 15, 2025'
+        }}
+        lookingForBuddy={true}
+      />
 
       {/* Bio Section */}
       <Card style={styles.section}>

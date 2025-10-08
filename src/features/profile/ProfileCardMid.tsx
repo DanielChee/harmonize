@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
-import { Card, Tag } from '@components';
+import { Card, Tag, ConcertPreferencesGrid } from '@components';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { User, SpotifyData } from '@types';
@@ -102,31 +102,15 @@ export const ProfileCardMid: React.FC<ProfileCardMidProps> = ({ user, spotifyDat
         </Card>
       )}
 
-      {/* Concert Preferences Grid (TODO: implement concert-preferences-grid) */}
+      {/* Concert Preferences Grid */}
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Concert Preferences</Text>
-        <View style={styles.preferencesGrid}>
-          <View style={styles.preferenceItem}>
-            <MaterialIcons name="attach-money" size={24} color={COLORS.text.secondary} />
-            <Text style={styles.preferenceText}>Budget-friendly</Text>
-          </View>
-          <View style={styles.preferenceItem}>
-            <MaterialIcons name="airline-seat-recline-normal" size={24} color={COLORS.text.secondary} />
-            <Text style={styles.preferenceText}>Seated</Text>
-          </View>
-          <View style={styles.preferenceItem}>
-            <MaterialIcons name="directions-car" size={24} color={COLORS.text.secondary} />
-            <Text style={styles.preferenceText}>Can drive</Text>
-          </View>
-          <View style={styles.preferenceItem}>
-            <MaterialIcons name="people" size={24} color={COLORS.text.secondary} />
-            <Text style={styles.preferenceText}>
-              {user.group_preference === 'group' ? 'Group' :
-               user.group_preference === 'partner' ? '1-on-1' :
-               'Flexible'}
-            </Text>
-          </View>
-        </View>
+        <ConcertPreferencesGrid
+          budget="budget-friendly"
+          seating="seated"
+          transport="can-drive"
+          matching={user.group_preference === 'both' ? 'flexible' : user.group_preference}
+        />
       </Card>
 
       {/* Placeholder for concert interest card */}
@@ -214,24 +198,6 @@ const styles = StyleSheet.create({
   artistName: {
     fontSize: TYPOGRAPHY.sizes.xs,
     color: COLORS.text.primary,
-    textAlign: 'center',
-  },
-  preferencesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
-  preferenceItem: {
-    alignItems: 'center',
-    width: '45%',
-    padding: SPACING.sm,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  preferenceText: {
-    fontSize: TYPOGRAPHY.sizes.xs,
-    color: COLORS.text.secondary,
-    marginTop: SPACING.xs,
     textAlign: 'center',
   },
   placeholder: {

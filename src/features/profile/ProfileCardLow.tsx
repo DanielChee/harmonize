@@ -5,7 +5,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Card, Tag } from '@components';
+import { Card, Tag, ConcertInterestPill } from '@components';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { User, SpotifyData } from '@types';
@@ -59,6 +59,14 @@ export const ProfileCardLow: React.FC<ProfileCardLowProps> = ({ user, spotifyDat
                 <MaterialIcons name="verified" size={20} color={COLORS.background} />
               </View>
             )}
+
+            {/* Concert Interest Pill */}
+            <View style={styles.concertPillContainer}>
+              <ConcertInterestPill
+                concertName="Taylor Swift"
+                isLookingForBuddy={true}
+              />
+            </View>
           </View>
 
           {/* Bottom Info */}
@@ -127,7 +135,11 @@ const styles = StyleSheet.create({
   },
   topInfo: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  concertPillContainer: {
+    flex: 1,
     alignItems: 'flex-start',
   },
   verifiedBadge: {
