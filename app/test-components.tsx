@@ -2,10 +2,14 @@
 // Visual validation for all Figma-based components
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Switch } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Switch, Image, Dimensions } from 'react-native';
 import { Button, Card, Tag, SettingsRow, Input } from '@components';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
+import { TEST_USER, TEST_SPOTIFY_DATA, TEST_GENRES } from '@/utils';
+import { ProfileCardHigh } from '@/features/profile/ProfileCardHigh';
+import { ProfileCardMid } from '@/features/profile/ProfileCardMid';
+import { ProfileCardLow } from '@/features/profile/ProfileCardLow';
 
 export default function TestComponentsScreen() {
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set(['Pop', 'Jazz']));
@@ -256,38 +260,70 @@ export default function TestComponentsScreen() {
         </TestGroup>
       </Section>
 
-      {/* Integration Test */}
-      <Section title="Integration Test" subtitle="Components working together">
-        <Card variant="default">
-          <Text style={styles.sectionTitle}>Complete Profile Example</Text>
+      {/* Test Profile */}
+      <Section title="Test Profile" subtitle="Mock user data for development">
+        <Card variant="elevated">
+          {/* Profile Header */}
+          <View style={styles.profileHeader}>
+            <Image
+              source={{ uri: TEST_USER.profile_picture_url }}
+              style={styles.profileAvatar}
+            />
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{TEST_USER.display_name}</Text>
+              <Text style={styles.profileMeta}>
+                {TEST_USER.age} • {TEST_USER.pronouns}
+              </Text>
+            </View>
+          </View>
 
+          {/* Bio */}
+          <Text style={styles.profileBio}>{TEST_USER.bio}</Text>
+
+          {/* Info Cards */}
           <View style={styles.profileSection}>
             <Card
               icon={<MaterialIcons name="school" size={20} color="rgba(0,0,0,0.8)" />}
-              badge={<MaterialIcons name="verified" size={16} color="rgba(0,0,0,0.8)" />}
+              badge={
+                TEST_USER.is_verified ? (
+                  <MaterialIcons name="verified" size={16} color={COLORS.success} />
+                ) : undefined
+              }
             >
-              <Text style={styles.cardText}>Georgia Tech</Text>
+              <Text style={styles.cardText}>{TEST_USER.university}</Text>
             </Card>
 
-            <Card
-              icon={<MaterialIcons name="location-on" size={20} color="rgba(0,0,0,0.8)" />}
-            >
-              <Text style={styles.cardText}>Atlanta, GA</Text>
+            <Card icon={<MaterialIcons name="location-on" size={20} color="rgba(0,0,0,0.8)" />}>
+              <Text style={styles.cardText}>{TEST_USER.city}</Text>
+            </Card>
+
+            <Card icon={<MaterialIcons name="headphones" size={20} color="rgba(0,0,0,0.8)" />}>
+              <Text style={styles.cardText}>{TEST_USER.hours_on_spotify} hours on Spotify</Text>
             </Card>
           </View>
 
-          <Text style={styles.label}>Music Preferences</Text>
+          {/* Top Genres */}
+          <Text style={styles.label}>Top Genres</Text>
           <View style={styles.tagGrid}>
-            {['Pop', 'Jazz', 'Rock'].map((genre) => (
-              <Tag
-                key={genre}
-                label={genre}
-                selected={selectedTags.has(genre)}
-                onPress={() => toggleTag(genre)}
-              />
+            {TEST_SPOTIFY_DATA.top_genres.map((genre) => (
+              <Tag key={genre} label={genre} selected readOnly />
             ))}
           </View>
 
+          {/* Top Artists */}
+          <Text style={styles.label}>Top Artists</Text>
+          <View style={styles.artistGrid}>
+            {TEST_SPOTIFY_DATA.top_artists.slice(0, 3).map((artist) => (
+              <View key={artist.id} style={styles.artistItem}>
+                <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
+                <Text style={styles.artistName} numberOfLines={1}>
+                  {artist.name}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Actions */}
           <View style={styles.buttonGroup}>
             <Button
               title="Connect Spotify"
@@ -296,12 +332,78 @@ export default function TestComponentsScreen() {
               fullWidth
             />
             <Button
-              title="Save Profile"
-              onPress={() => console.log('Save')}
+              title="Edit Profile"
+              onPress={() => console.log('Edit')}
               variant="outlined"
               fullWidth
             />
           </View>
+        </Card>
+      </Section>
+
+      {/* Profile Detail Levels */}
+      <Section title="Profile Detail Levels" subtitle="High, Mid, and Low detail views">
+        <Text style={styles.infoText}>
+          Three profile view modes for user testing. Swipe through to see different detail levels.
+        </Text>
+
+        {/* High Detail */}
+        <View style={styles.profileCard}>
+          <Text style={styles.profileCardTitle}>HIGH DETAIL - Full Information</Text>
+          <View style={styles.profileCardContainer}>
+            <ProfileCardHigh user={TEST_USER} spotifyData={TEST_SPOTIFY_DATA} />
+          </View>
+        </View>
+
+        {/* Mid Detail */}
+        <View style={styles.profileCard}>
+          <Text style={styles.profileCardTitle}>MID DETAIL - Balanced View</Text>
+          <View style={styles.profileCardContainer}>
+            <ProfileCardMid user={TEST_USER} spotifyData={TEST_SPOTIFY_DATA} />
+          </View>
+        </View>
+
+        {/* Low Detail */}
+        <View style={styles.profileCard}>
+          <Text style={styles.profileCardTitle}>LOW DETAIL - Image-Heavy</Text>
+          <View style={styles.profileCardContainerLow}>
+            <ProfileCardLow user={TEST_USER} spotifyData={TEST_SPOTIFY_DATA} />
+          </View>
+        </View>
+      </Section>
+
+      {/* Settings Example */}
+      <Section title="Profile Settings" subtitle="Using SettingsRow with test data">
+        <Card variant="outlined">
+          <SettingsRow
+            label="Display Name"
+            description="How others see you"
+            value={TEST_USER.display_name}
+            onPress={() => console.log('Edit name')}
+          />
+          <SettingsRow
+            label="University"
+            description="Verify your school"
+            value={TEST_USER.university}
+            onPress={() => console.log('Edit university')}
+          />
+          <SettingsRow
+            label="Location"
+            description="Set your city"
+            value={TEST_USER.city}
+            onPress={() => console.log('Edit location')}
+          />
+          <SettingsRow
+            label="Pronouns"
+            value={TEST_USER.pronouns}
+            onPress={() => console.log('Edit pronouns')}
+          />
+          <SettingsRow
+            label="Show on Profile"
+            description="Display university publicly"
+            showChevron={false}
+            rightComponent={<Switch value={TEST_USER.show_university} onValueChange={() => {}} />}
+          />
         </Card>
       </Section>
 
@@ -447,5 +549,83 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sizes.sm,
     color: COLORS.text.secondary,
     textAlign: 'center',
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  profileAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: SPACING.md,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: TYPOGRAPHY.sizes.xl,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.text.primary,
+  },
+  profileMeta: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.text.secondary,
+    marginTop: SPACING.xs,
+  },
+  profileBio: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
+    lineHeight: 20,
+  },
+  artistGrid: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  artistItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  artistImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: SPACING.xs,
+  },
+  artistName: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.primary,
+    textAlign: 'center',
+  },
+  infoText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.md,
+    lineHeight: 20,
+  },
+  profileCard: {
+    marginBottom: SPACING.xl,
+  },
+  profileCardTitle: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.primary,
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
+  },
+  profileCardContainer: {
+    height: 600,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: COLORS.surface,
+  },
+  profileCardContainerLow: {
+    height: 700,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: COLORS.text.primary,
   },
 });
