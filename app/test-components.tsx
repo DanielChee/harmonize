@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Switch, Image, Dimensions } from 'react-native';
 import { Button, Card, Tag, SettingsRow, Input } from '@components';
+import { TestTabSwitcher } from '@components/TestTabSwitcher';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import { TEST_USER, TEST_SPOTIFY_DATA, TEST_GENRES } from '@/utils';
@@ -28,9 +29,11 @@ export default function TestComponentsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Component Test Gallery</Text>
-      <Text style={styles.subtitle}>Visual validation of Figma components</Text>
+    <View style={styles.wrapper}>
+      <TestTabSwitcher />
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Component Test Gallery</Text>
+        <Text style={styles.subtitle}>Visual validation of Figma components</Text>
 
       {/* Button Tests */}
       <Section title="Button Component" subtitle="ActionButtonPill from Figma">
@@ -415,7 +418,8 @@ export default function TestComponentsScreen() {
           Skeletons created from Figma specs. Complete TODOs to finalize.
         </Text>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -447,9 +451,12 @@ const ChecklistItem = ({ items }: { items: string[] }) => (
 );
 
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  container: {
+    flex: 1,
   },
   content: {
     padding: SPACING.lg,
