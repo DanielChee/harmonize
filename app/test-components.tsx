@@ -2,21 +2,29 @@
 // Visual validation for all Figma-based components
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Switch, Image, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Switch, Image, Dimensions, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { Button, Card, Tag, SettingsRow, Input } from '@components';
 import { TestTabSwitcher } from '@components/TestTabSwitcher';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { TEST_USER, TEST_SPOTIFY_DATA, TEST_GENRES } from '@/utils';
 import { ProfileCardHigh } from '@/features/profile/ProfileCardHigh';
 import { ProfileCardMid } from '@/features/profile/ProfileCardMid';
 import { ProfileCardLow } from '@/features/profile/ProfileCardLow';
+import { TEST_PROFILES } from '@utils/profileCycler';
+import { useRouter } from 'expo-router';
+import { scale, verticalScale, moderateScale, getDeviceType, responsiveSizes, createResponsiveSizes, SCREEN_WIDTH, SCREEN_HEIGHT } from '@utils/responsive';
 
 export default function TestComponentsScreen() {
+  const router = useRouter();
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set(['Pop', 'Jazz']));
   const [loading, setLoading] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [switchValue, setSwitchValue] = useState(false);
+
+  // Match screen state
+  const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<'high' | 'mid' | 'low'>('mid');
 
   const toggleTag = (tag: string) => {
     const newSelected = new Set(selectedTags);
@@ -28,9 +36,49 @@ export default function TestComponentsScreen() {
     setSelectedTags(newSelected);
   };
 
+  // Match screen functions
+  const handleNext = () => {
+    setCurrentProfileIndex((prev) => (prev + 1) % TEST_PROFILES.length);
+  };
+
+  const handlePrevious = () => {
+    setCurrentProfileIndex((prev) => (prev - 1 + TEST_PROFILES.length) % TEST_PROFILES.length);
+  };
+
+  const handleLike = () => {
+    console.log('Liked profile:', currentProfileIndex);
+    handleNext();
+  };
+
+  const handlePass = () => {
+    console.log('Passed profile:', currentProfileIndex);
+    handlePrevious();
+  };
+
+  const cycleViewMode = () => {
+    const modes: ('high' | 'mid' | 'low')[] = ['high', 'mid', 'low'];
+    const currentModeIndex = modes.indexOf(viewMode);
+    const nextMode = modes[(currentModeIndex + 1) % modes.length];
+    setViewMode(nextMode);
+  };
+
+  const currentProfile = TEST_PROFILES[currentProfileIndex];
+  const viewModeLabel = viewMode === 'high' ? 'High Detail' : viewMode === 'mid' ? 'Mid Detail' : 'Low Detail';
+
   return (
     <View style={styles.wrapper}>
       <TestTabSwitcher />
+
+      {/* Navigation Button to Main App */}
+      <TouchableOpacity
+        style={styles.backToAppButton}
+        onPress={() => router.push('/(tabs)/profile')}
+        activeOpacity={0.7}
+      >
+        <MaterialIcons name="arrow-back" size={20} color={COLORS.text.inverse} />
+        <Text style={styles.backToAppText}>Back to Main App</Text>
+      </TouchableOpacity>
+
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.title}>Component Test Gallery</Text>
         <Text style={styles.subtitle}>Visual validation of Figma components</Text>
@@ -263,6 +311,73 @@ export default function TestComponentsScreen() {
         </TestGroup>
       </Section>
 
+      {/* Responsive Scaling Tests */}
+      <Section title="Responsive Scaling" subtitle="Verify scaling calculations for different screen sizes">
+        <Card variant="elevated">
+          <Text style={styles.scalingHeader}>Current Device</Text>
+          <Text style={styles.scalingText}>Screen Width: {SCREEN_WIDTH}px</Text>
+          <Text style={styles.scalingText}>Screen Height: {SCREEN_HEIGHT}px</Text>
+          <Text style={styles.scalingText}>Device Type: {JSON.stringify(getDeviceType(), null, 2).replace(/[{}"]/g, '')}</Text>
+        </Card>
+
+        <Card variant="elevated" style={{ marginTop: SPACING.md }}>
+          <Text style={styles.scalingHeader}>Scaling Functions Test</Text>
+          <Text style={styles.scalingText}>scale(64): {Math.round(scale(64))}px (action button)</Text>
+          <Text style={styles.scalingText}>moderateScale(64): {Math.round(moderateScale(64))}px (balanced)</Text>
+          <Text style={styles.scalingText}>moderateScale(100): {Math.round(moderateScale(100))}px (avatar)</Text>
+          <Text style={styles.scalingText}>verticalScale(200): {Math.round(verticalScale(200))}px (featured song)</Text>
+        </Card>
+
+        <Card variant="elevated" style={{ marginTop: SPACING.md }}>
+          <Text style={styles.scalingHeader}>Responsive Sizes (Pre-calculated)</Text>
+          <Text style={styles.scalingText}>Action Button: {Math.round(responsiveSizes.actionButton.width)}x{Math.round(responsiveSizes.actionButton.height)}px</Text>
+          <Text style={styles.scalingText}>Avatar Large: {Math.round(responsiveSizes.avatar.large)}px</Text>
+          <Text style={styles.scalingText}>Avatar Medium: {Math.round(responsiveSizes.avatar.medium)}px</Text>
+          <Text style={styles.scalingText}>Avatar Small: {Math.round(responsiveSizes.avatar.small)}px</Text>
+          <Text style={styles.scalingText}>Artist Image: {Math.round(responsiveSizes.artistImage.large)}px</Text>
+          <Text style={styles.scalingText}>Review Avatar: {Math.round(responsiveSizes.reviewAvatar)}px</Text>
+          <Text style={styles.scalingText}>Concert Image: {Math.round(responsiveSizes.concertImage)}px</Text>
+        </Card>
+
+        <Card variant="elevated" style={{ marginTop: SPACING.md }}>
+          <Text style={styles.scalingHeader}>Visual Test: Action Buttons</Text>
+          <View style={styles.scalingButtonContainer}>
+            <View style={[styles.scalingButton, {
+              width: responsiveSizes.actionButton.width,
+              height: responsiveSizes.actionButton.height,
+              borderRadius: responsiveSizes.actionButton.borderRadius,
+              borderColor: COLORS.error,
+              borderWidth: 2,
+            }]}>
+              <MaterialCommunityIcons name="close" size={responsiveSizes.icon.xlarge} color={COLORS.error} />
+            </View>
+            <View style={[styles.scalingButton, {
+              width: responsiveSizes.actionButton.width,
+              height: responsiveSizes.actionButton.height,
+              borderRadius: responsiveSizes.actionButton.borderRadius,
+              borderColor: COLORS.success,
+              borderWidth: 2,
+            }]}>
+              <MaterialCommunityIcons name="heart" size={responsiveSizes.icon.xlarge} color={COLORS.success} />
+            </View>
+          </View>
+          <Text style={[styles.scalingText, { textAlign: 'center', marginTop: SPACING.sm }]}>
+            These buttons scale with screen size
+          </Text>
+        </Card>
+
+        <ChecklistItem
+          items={[
+            `Base dimensions: 320x568 (iPhone SE - smallest modern iPhone)`,
+            `Current screen: ${SCREEN_WIDTH}x${SCREEN_HEIGHT}`,
+            `Scale factor: ${(SCREEN_WIDTH / 320).toFixed(2)}x horizontal`,
+            `Moderate scale reduces over-scaling by 50%`,
+            `All devices scale UP from iPhone SE baseline`,
+            `Tested on: ${SCREEN_WIDTH <= 320 ? 'iPhone SE' : SCREEN_WIDTH < 375 ? 'Small Phone' : SCREEN_WIDTH < 600 ? 'Phone' : 'Tablet'}`,
+          ]}
+        />
+      </Section>
+
       {/* Test Profile */}
       <Section title="Test Profile" subtitle="Mock user data for development">
         <Card variant="elevated">
@@ -300,8 +415,8 @@ export default function TestComponentsScreen() {
               <Text style={styles.cardText}>{TEST_USER.city}</Text>
             </Card>
 
-            <Card icon={<MaterialIcons name="headphones" size={20} color="rgba(0,0,0,0.8)" />}>
-              <Text style={styles.cardText}>{TEST_USER.hours_on_spotify} hours on Spotify</Text>
+            <Card icon={<MaterialIcons name="people" size={20} color="rgba(0,0,0,0.8)" />}>
+              <Text style={styles.cardText}>Looking for {TEST_USER.looking_for}</Text>
             </Card>
           </View>
 
@@ -342,6 +457,76 @@ export default function TestComponentsScreen() {
             />
           </View>
         </Card>
+      </Section>
+
+      {/* Match Screen with Profile Cycling */}
+      <Section title="Match Screen - Profile Cycling" subtitle="Interactive profile browser with actions">
+        <Text style={styles.infoText}>
+          Test the new Match screen functionality: cycle through 3 test profiles with view modes and action buttons.
+        </Text>
+
+        <Card variant="elevated">
+          {/* Header with controls */}
+          <View style={styles.matchHeader}>
+            <TouchableOpacity style={styles.viewModeButton} onPress={cycleViewMode}>
+              <MaterialIcons name="remove-red-eye" size={20} color={COLORS.primary} />
+              <Text style={styles.viewModeText}>{viewModeLabel}</Text>
+            </TouchableOpacity>
+
+            <View style={styles.profileCounter}>
+              <Text style={styles.counterText}>
+                Profile {currentProfileIndex + 1} / {TEST_PROFILES.length}
+              </Text>
+            </View>
+          </View>
+
+          {/* Profile Card Display */}
+          <View style={styles.matchCardContainer}>
+            <ScrollView style={styles.matchScrollView} showsVerticalScrollIndicator={false}>
+              {viewMode === 'high' && (
+                <ProfileCardHigh user={currentProfile.user} spotifyData={currentProfile.spotify} />
+              )}
+              {viewMode === 'mid' && (
+                <ProfileCardMid user={currentProfile.user} spotifyData={currentProfile.spotify} />
+              )}
+              {viewMode === 'low' && (
+                <ProfileCardLow user={currentProfile.user} spotifyData={currentProfile.spotify} />
+              )}
+            </ScrollView>
+          </View>
+
+          {/* Action Buttons (Pass = Previous, Like = Next) */}
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity style={[styles.actionButton, styles.passButton]} onPress={handlePass}>
+              <MaterialCommunityIcons name="close" size={32} color={COLORS.error} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.actionButton, styles.likeButton]} onPress={handleLike}>
+              <MaterialCommunityIcons name="heart" size={32} color={COLORS.success} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Info */}
+          <View style={styles.matchInfo}>
+            <Text style={styles.matchInfoText}>
+              Pass (X) = Previous • Like (♥) = Next
+            </Text>
+            <Text style={styles.matchInfoSubtext}>
+              Current: {currentProfile.user.display_name} • {currentProfile.user.university}
+            </Text>
+          </View>
+        </Card>
+
+        <ChecklistItem
+          items={[
+            'View Mode Toggle: Cycles High → Mid → Low → High',
+            'Pass Button (X): Red border, goes to PREVIOUS profile',
+            'Like Button (♥): Green border, goes to NEXT profile',
+            'Profile Counter: Shows current position',
+            '3 Test Profiles: Alex (GT), Jordan (Emory), Taylor (GSU)',
+            'Simplified UI: No separate navigation arrows',
+          ]}
+        />
       </Section>
 
       {/* Profile Detail Levels */}
@@ -634,5 +819,141 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: COLORS.text.primary,
+  },
+  backToAppButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    marginHorizontal: SPACING.lg,
+    marginVertical: SPACING.sm,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 8,
+  },
+  backToAppText: {
+    fontSize: TYPOGRAPHY.sizes.base,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.text.inverse,
+  },
+  // Match screen styles
+  matchHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  viewModeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    backgroundColor: COLORS.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  viewModeText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.primary,
+    fontWeight: TYPOGRAPHY.weights.medium as any,
+  },
+  profileCounter: {
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+  },
+  counterText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.secondary,
+    fontWeight: TYPOGRAPHY.weights.medium as any,
+  },
+  matchCardContainer: {
+    height: 600,
+    backgroundColor: COLORS.background,
+  },
+  matchScrollView: {
+    flex: 1,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.xl,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  actionButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  passButton: {
+    borderWidth: 2,
+    borderColor: COLORS.error,
+  },
+  likeButton: {
+    borderWidth: 2,
+    borderColor: COLORS.success,
+  },
+  matchInfo: {
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  matchInfoText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.xs,
+  },
+  matchInfoSubtext: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.tertiary,
+    fontStyle: 'italic',
+  },
+  // Responsive scaling test styles
+  scalingHeader: {
+    fontSize: TYPOGRAPHY.sizes.base,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.primary,
+    marginBottom: SPACING.sm,
+  },
+  scalingText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
+    fontFamily: 'monospace',
+  },
+  scalingButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.xl,
+    marginTop: SPACING.md,
+  },
+  scalingButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });

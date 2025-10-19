@@ -9,6 +9,7 @@ import { Card, Tag, ConcertInterestPill } from '@components';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { User, SpotifyData } from '@types';
+import { responsiveSizes } from '@utils/responsive';
 
 interface ProfileCardLowProps {
   user: User;
@@ -118,12 +119,13 @@ export const ProfileCardLow: React.FC<ProfileCardLowProps> = ({ user, spotifyDat
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     backgroundColor: COLORS.background,
   },
   backgroundImage: {
     flex: 1,
     width: '100%',
-    height: '100%',
   },
   backgroundImageStyle: {
     resizeMode: 'cover',
@@ -131,7 +133,8 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
     justifyContent: 'space-between',
-    padding: SPACING.lg,
+    paddingHorizontal: '5%', // Percentage-based padding
+    paddingVertical: SPACING.md,
   },
   topInfo: {
     flexDirection: 'row',
@@ -187,9 +190,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   artistImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: responsiveSizes.avatar.small,
+    height: responsiveSizes.avatar.small,
+    borderRadius: responsiveSizes.avatar.small / 2,
     borderWidth: 2,
     borderColor: COLORS.background,
   },

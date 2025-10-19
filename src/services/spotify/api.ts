@@ -5,8 +5,8 @@ import type {
   TrackObject,
   PrivateUserObject,
   PagingObject,
-  SpotifyData,
 } from '../../types/spotify-types';
+import type { SpotifyData, SpotifyArtist, SpotifyTrack } from '@types';
 import { getValidAccessToken } from './auth';
 
 /**
@@ -122,6 +122,32 @@ const calculateListeningHours = (tracks: TrackObject[]): number => {
 };
 
 /**
+ * Transform Spotify API ArtistObject to app's SpotifyArtist type
+ */
+const transformArtist = (artist: ArtistObject): SpotifyArtist => {
+  return {
+    id: artist.id,
+    name: artist.name,
+    image_url: artist.images[0]?.url || 'https://i.pravatar.cc/300',
+    genres: artist.genres,
+  };
+};
+
+/**
+ * Transform Spotify API TrackObject to app's SpotifyTrack type
+ */
+const transformTrack = (track: TrackObject): SpotifyTrack => {
+  return {
+    id: track.id,
+    name: track.name,
+    artist: track.artists[0]?.name || 'Unknown Artist',
+    preview_url: track.preview_url || '',
+    image_url: track.album.images[0]?.url || 'https://i.pravatar.cc/300',
+    duration_ms: track.duration_ms,
+  };
+};
+
+/**
  * Fetch all Spotify data for user profile
  * This combines multiple API calls into a single SpotifyData object
  */
@@ -134,18 +160,29 @@ export const fetchAllSpotifyData = async (): Promise<SpotifyData> => {
       getTopTracks('medium_term', 5),
     ]);
 
-    const topArtists = topArtistsResponse.items;
-    const topTracks = topTracksResponse.items;
-    const topGenres = extractTopGenres(topArtists, 5);
-    const listeningHours = calculateListeningHours(topTracks);
+    const topArtistsRaw = topArtistsResponse.items;
+    const topTracksRaw = topTracksResponse.items;
 
+    // Transform to app types
+    const topArtists = topArtistsRaw.map(transformArtist);
+    const topTracks = topTracksRaw.map(transformTrack);
+    const topGenres = extractTopGenres(topArtistsRaw, 5);
+    const totalListeningTime = calculateListeningHours(topTracksRaw);
+
+    // Return data matching app's SpotifyData type
     return {
-      spotifyUserId: userProfile.id,
-      topArtists,
-      topTracks,
-      topGenres,
-      listeningHours,
-      lastSyncedAt: new Date().toISOString(),
+      id: `spotify_${userProfile.id}`,
+      profile_id: userProfile.id,
+      spotify_user_id: userProfile.id,
+      spotify_username: userProfile.display_name || userProfile.id,
+      top_genres: topGenres,
+      top_artists: topArtists,
+      top_tracks: topTracks,
+      total_listening_time: totalListeningTime,
+      most_active_listening_time: 'evening', // Default value (could be calculated from listening history)
+      recent_tracks: [], // Would need separate API call
+      currently_playing: null, // Would need separate API call
+      last_spotify_sync: new Date().toISOString(),
     };
   } catch (error) {
     console.error('Error fetching Spotify data:', error);

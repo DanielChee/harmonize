@@ -2,16 +2,20 @@ import { SpotifyButton } from "@components/SpotifyButton";
 import { TestTabSwitcher } from "@components/TestTabSwitcher";
 import { COLORS, SPACING, TYPOGRAPHY } from "@constants";
 import { supabase } from "@services/supabase";
+import { logoutFromSpotify } from "@services/spotify";
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from "uuid";
-import type { SpotifyData } from "../src/types/spotify-types";
+import type { SpotifyData } from "../src/types";
+import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 
 // TEST PAGE: Supabase + Spotify Integration
 
 export default function TestSupabase() {
+  const router = useRouter();
   const [supabaseMessage, setSupabaseMessage] = useState("Testing Supabase...");
   const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
@@ -72,9 +76,30 @@ export default function TestSupabase() {
     setSpotifyData(null);
   };
 
+  const handleSpotifyLogout = async () => {
+    const success = await logoutFromSpotify();
+    if (success) {
+      setSpotifyData(null);
+      setSpotifyError(null);
+    } else {
+      setSpotifyError("Failed to logout from Spotify");
+    }
+  };
+
   return (
     <View style={styles.wrapper}>
       <TestTabSwitcher />
+
+      {/* Navigation Button to Main App */}
+      <TouchableOpacity
+        style={styles.backToAppButton}
+        onPress={() => router.push('/(tabs)/profile')}
+        activeOpacity={0.7}
+      >
+        <MaterialIcons name="arrow-back" size={20} color={COLORS.text.inverse} />
+        <Text style={styles.backToAppText}>Back to Main App</Text>
+      </TouchableOpacity>
+
       <ScrollView style={styles.container}>
         <View style={styles.section}>
           <Text style={styles.title}>Test Page</Text>
@@ -104,17 +129,22 @@ export default function TestSupabase() {
 
               <View style={styles.resultItem}>
                 <Text style={styles.label}>User ID:</Text>
-                <Text style={styles.value}>{spotifyData.spotifyUserId}</Text>
+                <Text style={styles.value}>{spotifyData.spotify_user_id}</Text>
+              </View>
+
+              <View style={styles.resultItem}>
+                <Text style={styles.label}>Username:</Text>
+                <Text style={styles.value}>{spotifyData.spotify_username}</Text>
               </View>
 
               <View style={styles.resultItem}>
                 <Text style={styles.label}>Top Genres:</Text>
-                <Text style={styles.value}>{spotifyData.topGenres.join(", ")}</Text>
+                <Text style={styles.value}>{spotifyData.top_genres.join(", ")}</Text>
               </View>
 
               <View style={styles.resultItem}>
                 <Text style={styles.label}>Top Artists:</Text>
-                {spotifyData.topArtists.map((artist, index) => (
+                {spotifyData.top_artists.map((artist, index) => (
                   <Text key={artist.id} style={styles.value}>
                     {index + 1}. {artist.name}
                   </Text>
@@ -123,19 +153,22 @@ export default function TestSupabase() {
 
               <View style={styles.resultItem}>
                 <Text style={styles.label}>Top Tracks:</Text>
-                {spotifyData.topTracks.map((track, index) => (
+                {spotifyData.top_tracks.map((track, index) => (
                   <Text key={track.id} style={styles.value}>
-                    {index + 1}. {track.name} - {track.artists[0].name}
+                    {index + 1}. {track.name} - {track.artist}
                   </Text>
                 ))}
               </View>
 
-              {spotifyData.listeningHours && (
-                <View style={styles.resultItem}>
-                  <Text style={styles.label}>Est. Listening Hours:</Text>
-                  <Text style={styles.value}>{spotifyData.listeningHours}h</Text>
-                </View>
-              )}
+              {/* Logout Button */}
+              <TouchableOpacity
+                style={styles.logoutButton}
+                onPress={handleSpotifyLogout}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons name="logout" size={20} color={COLORS.error} />
+                <Text style={styles.logoutText}>Logout from Spotify</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -207,5 +240,39 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.scale.body,
     color: COLORS.text.secondary,
     paddingLeft: SPACING.sm,
+  },
+  backToAppButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    marginHorizontal: SPACING.lg,
+    marginVertical: SPACING.sm,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 8,
+  },
+  backToAppText: {
+    ...TYPOGRAPHY.scale.button,
+    color: COLORS.text.inverse,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.background,
+    borderWidth: 2,
+    borderColor: COLORS.error,
+    marginTop: SPACING.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: 8,
+  },
+  logoutText: {
+    ...TYPOGRAPHY.scale.button,
+    color: COLORS.error,
+    fontWeight: '600',
   },
 });

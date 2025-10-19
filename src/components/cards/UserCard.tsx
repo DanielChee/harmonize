@@ -26,7 +26,7 @@ export const UserCard: React.FC<UserCardProps> = ({
   showActions = true,
   compact = false,
 }) => {
-  const verificationBadge = user.verification_level > 0 && (
+  const verificationBadge = (user.verification_level || 0) > 0 && (
     <View style={styles.verificationBadge}>
       <MaterialCommunityIcons
         name="check-decagram"

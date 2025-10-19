@@ -1,10 +1,9 @@
 // Spotify OAuth Authentication with PKCE
+import { API_ENDPOINTS, SPOTIFY_SCOPES } from '@constants';
 import * as AuthSession from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
-import { API_ENDPOINTS, SPOTIFY_SCOPES } from '@constants';
 import type { SpotifyTokenResponse, StoredSpotifyTokens } from '../../types/spotify-types';
 
 // Enable web browser dismissal on Android
@@ -297,6 +296,21 @@ export const clearTokens = async (): Promise<void> => {
 export const isAuthenticated = async (): Promise<boolean> => {
   const token = await getValidAccessToken();
   return token !== null;
+};
+
+/**
+ * Log out from Spotify - clears all stored tokens
+ */
+export const logoutFromSpotify = async (): Promise<boolean> => {
+  try {
+    console.log('🔓 Logging out from Spotify...');
+    await clearTokens();
+    console.log('✅ Successfully logged out from Spotify');
+    return true;
+  } catch (error) {
+    console.error('❌ Error logging out from Spotify:', error);
+    return false;
+  }
 };
 
 /**

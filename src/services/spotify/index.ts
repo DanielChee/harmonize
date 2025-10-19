@@ -1,10 +1,7 @@
-// Spotify Service - Main Export
-// Combines OAuth authentication and API data fetching
-
 // Re-export authentication functions
 export {
   authorizeWithSpotify, clearTokens, getClientId,
-  getRedirectUri, getStoredTokens, getValidAccessToken, isAuthenticated, isTokenExpired, refreshAccessToken, storeTokens
+  getRedirectUri, getStoredTokens, getValidAccessToken, isAuthenticated, isTokenExpired, logoutFromSpotify, refreshAccessToken, storeTokens
 } from './auth';
 
 // Re-export API functions

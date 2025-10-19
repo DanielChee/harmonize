@@ -42,3 +42,9 @@ app-example
 # generated native folders
 /ios
 /android
+
+# docs
+src/docs/
+
+# Scripts
+scripts/

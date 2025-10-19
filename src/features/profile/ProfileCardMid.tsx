@@ -8,6 +8,7 @@ import { Card, Tag, ConcertPreferencesGrid } from '@components';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { User, SpotifyData } from '@types';
+import { responsiveSizes } from '@utils/responsive';
 
 interface ProfileCardMidProps {
   user: User;
@@ -40,7 +41,7 @@ export const ProfileCardMid: React.FC<ProfileCardMidProps> = ({ user, spotifyDat
         <View style={styles.headerInfo}>
           <Text style={styles.name}>{user.display_name || user.username}</Text>
           <Text style={styles.meta}>
-            {user.age} • {user.pronouns} • {user.city}
+            {user.pronouns} • {user.age} yrs old
           </Text>
         </View>
       </View>
@@ -62,26 +63,53 @@ export const ProfileCardMid: React.FC<ProfileCardMidProps> = ({ user, spotifyDat
           <Text style={styles.infoTextCompact}>{user.university}</Text>
         </Card>
 
-        {spotifyData && (
+        {user.academic_year && (
           <Card
-            icon={<MaterialIcons name="headphones" size={18} color="rgba(0,0,0,0.8)" />}
+            icon={<MaterialIcons name="school" size={18} color="rgba(0,0,0,0.8)" />}
             variant="outlined"
             padding="sm"
           >
-            <Text style={styles.infoTextCompact}>{spotifyData.total_listening_time}h</Text>
+            <Text style={styles.infoTextCompact}>{user.academic_year}</Text>
           </Card>
         )}
+
+        <Card
+          icon={<MaterialIcons name="location-on" size={18} color="rgba(0,0,0,0.8)" />}
+          variant="outlined"
+          padding="sm"
+        >
+          <Text style={styles.infoTextCompact}>{user.city}</Text>
+        </Card>
       </View>
 
-      {/* Top Genres (Condensed to 3-5) */}
-      {spotifyData && spotifyData.top_genres.length > 0 && (
+      {/* Music Stats */}
+      {spotifyData && (
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Top Genres</Text>
-          <View style={styles.genresRow}>
-            {spotifyData.top_genres.slice(0, 5).map((genre) => (
-              <Tag key={genre} label={genre} selected readOnly />
-            ))}
-          </View>
+          <Text style={styles.sectionTitle}>Music Stats</Text>
+
+          {/* Spotify Hours */}
+          {user.hours_on_spotify && (
+            <View style={styles.spotifyHours}>
+              <MaterialIcons name="music-note" size={16} color={COLORS.text.primary} />
+              <Text style={styles.spotifyHoursText}>
+                {user.hours_on_spotify.toLocaleString()} hours
+              </Text>
+            </View>
+          )}
+
+          {/* Top Genres (Condensed to 3) */}
+          {spotifyData.top_genres.length > 0 && (
+            <>
+              <Text style={styles.subsectionTitle}>Top Genres</Text>
+              <View style={styles.genresRow}>
+                {spotifyData.top_genres.slice(0, 3).map((genre, index) => (
+                  <View key={`${genre}-${index}`} style={styles.genreBorderedTag}>
+                    <Text style={styles.genreTagText}>{genre}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
         </Card>
       )}
 
@@ -113,11 +141,8 @@ export const ProfileCardMid: React.FC<ProfileCardMidProps> = ({ user, spotifyDat
         />
       </Card>
 
-      {/* Placeholder for concert interest card */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Next Concert</Text>
-        <Text style={styles.placeholder}>Concert card will go here</Text>
-      </Card>
+      {/* Bottom Spacing */}
+      <View style={styles.bottomSpacing} />
     </ScrollView>
   );
 };
@@ -129,13 +154,14 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    padding: SPACING.lg,
+    paddingHorizontal: '5%', // Percentage-based padding
+    paddingVertical: SPACING.md,
     alignItems: 'center',
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: responsiveSizes.avatar.medium,
+    height: responsiveSizes.avatar.medium,
+    borderRadius: responsiveSizes.avatar.medium / 2,
     marginRight: SPACING.md,
   },
   headerInfo: {
@@ -152,8 +178,10 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   section: {
-    marginHorizontal: SPACING.lg,
+    marginHorizontal: '5%', // Percentage-based margin (scales with screen width)
     marginBottom: SPACING.md,
+    alignSelf: 'center',
+    maxWidth: '100%',
   },
   sectionTitle: {
     fontSize: TYPOGRAPHY.sizes.base,
@@ -168,13 +196,16 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: '5%', // Percentage-based padding
     marginBottom: SPACING.md,
     gap: SPACING.sm,
+    justifyContent: 'center', // Center the info cards
+    flexWrap: 'wrap', // Allow wrapping if needed
   },
   infoTextCompact: {
     fontSize: TYPOGRAPHY.sizes.xs,
     color: COLORS.text.primary,
+    flexShrink: 1, // Allow text to shrink if needed
   },
   genresRow: {
     flexDirection: 'row',
@@ -183,16 +214,21 @@ const styles = StyleSheet.create({
   },
   artistsRow: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    gap: SPACING.sm, // Reduced from md (16px) to sm (8px) to prevent overflow
+    width: '100%', // Ensure container respects parent constraints
+    justifyContent: 'center', // Center the artist items
   },
   artistItem: {
     alignItems: 'center',
     flex: 1,
+    minWidth: 70,
+    maxWidth: 90,
   },
   artistImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: '100%',
+    aspectRatio: 1, // Keep square shape
+    maxWidth: responsiveSizes.artistImage.small,
+    borderRadius: responsiveSizes.artistImage.small / 2,
     marginBottom: SPACING.xs,
   },
   artistName: {
@@ -200,9 +236,39 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
     textAlign: 'center',
   },
-  placeholder: {
+  // Spotify Hours
+  spotifyHours: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  spotifyHoursText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    color: COLORS.text.primary,
+  },
+  // Subsection Title
+  subsectionTitle: {
     fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.medium,
     color: COLORS.text.secondary,
-    fontStyle: 'italic',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  // Bordered Genre Tags
+  genreBorderedTag: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.text.secondary,
+  },
+  genreTagText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.primary,
+  },
+  bottomSpacing: {
+    height: SPACING.xl,
   },
 });

@@ -2,9 +2,9 @@
 
 export interface User {
   id: string;
-  user_id: string;
-  created_at: string;
-  updated_at: string;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
 
   // Basic Profile
   username: string;
@@ -14,37 +14,45 @@ export interface User {
   age: number;
   city: string;
   university: string;
+  academic_year?: string; // e.g., "Senior Undergrad", "Graduate Student", "Alumni"
 
   // Media
   profile_picture_url: string;
-  additional_photos: string[];
+  additional_photos?: string[];
 
   // Music
-  featured_song_id: string;
-  hours_on_spotify: number;
+  featured_song_id?: string;
+  hours_on_spotify?: number;
 
   // Preferences
   looking_for: 'friends' | 'dating' | 'both';
-  group_preference: 'group' | 'partner' | 'both';
-  age_range_min: number;
-  age_range_max: number;
-  distance_range: number;
+  group_preference?: 'group' | 'partner' | 'both';
+  age_range_min?: number;
+  age_range_max?: number;
+  distance_range?: number;
 
   // Privacy
-  profile_visibility: 'public' | 'verified_only' | 'private';
-  show_distance: boolean;
-  show_university: boolean;
+  profile_visibility?: 'public' | 'verified_only' | 'private';
+  show_distance?: boolean;
+  show_university?: boolean;
 
   // Verification
-  is_verified: boolean;
-  verification_level: number;
+  is_verified?: boolean;
+  verification_level?: number;
+
+  // Concert Preferences
+  concert_preferences?: string[];
+
+  // Activity Status
+  is_active?: boolean;
+  last_active?: string;
 }
 
 export interface SpotifyData {
-  id: string;
-  profile_id: string;
+  id?: string;
+  profile_id?: string;
   spotify_user_id: string;
-  spotify_username: string;
+  spotify_username?: string;
 
   // Music Data
   top_genres: string[];
@@ -52,14 +60,14 @@ export interface SpotifyData {
   top_tracks: SpotifyTrack[];
 
   // Listening Habits
-  total_listening_time: number;
-  most_active_listening_time: 'morning' | 'afternoon' | 'evening' | 'night';
+  total_listening_time?: number;
+  most_active_listening_time?: 'morning' | 'afternoon' | 'evening' | 'night';
 
   // Real-time Data
-  recent_tracks: SpotifyTrack[];
-  currently_playing: SpotifyTrack | null;
+  recent_tracks?: SpotifyTrack[];
+  currently_playing?: SpotifyTrack | null;
 
-  last_spotify_sync: string;
+  last_spotify_sync?: string;
 }
 
 export interface SpotifyArtist {

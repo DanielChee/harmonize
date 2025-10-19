@@ -3,7 +3,7 @@ import { BORDER_RADIUS, COLORS, SHADOWS, SPACING, TYPOGRAPHY } from '@constants'
 import { authorizeWithSpotify, fetchAllSpotifyData, isAuthenticated } from '@services/spotify';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import type { SpotifyData } from '../types/spotify-types';
+import type { SpotifyData } from '@types';
 
 interface SpotifyButtonProps {
   onSuccess?: (data: SpotifyData) => void;
@@ -25,6 +25,16 @@ export const SpotifyButton: React.FC<SpotifyButtonProps> = ({ onSuccess, onError
     try {
       const authenticated = await isAuthenticated();
       setIsConnected(authenticated);
+
+      // If already authenticated, fetch and pass data to parent
+      if (authenticated && onSuccess) {
+        try {
+          const spotifyData = await fetchAllSpotifyData();
+          onSuccess(spotifyData);
+        } catch (err) {
+          console.error('Error fetching existing Spotify data:', err);
+        }
+      }
     } catch (err) {
       console.error('Error checking auth status:', err);
     }

@@ -3,7 +3,7 @@
 Harmonize is a social music app designed to help university students and young adults meet concert buddies.  
 Think of it as a mix between **Hinge** and **Spotify** – we connect you with people who share your music taste and want to attend the same concerts.  
 
-Built with **Expo (React Native)**, **Supabase**, **Spotify API**, and **Songkick API**.  
+Built with **Expo (React Native)**, **Supabase**, **Spotify API**, and **   API**.  
 
 
 ## Prerequisites
