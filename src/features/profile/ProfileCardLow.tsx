@@ -5,7 +5,7 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Card, Tag, ConcertInterestPill } from '@components';
+import { ConcertInterestPill } from '@components';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { User, SpotifyData } from '@types';
@@ -47,6 +47,9 @@ export const ProfileCardLow: React.FC<ProfileCardLowProps> = ({ user, spotifyDat
         source={{ uri: user.profile_picture_url }}
         style={styles.backgroundImage}
         imageStyle={styles.backgroundImageStyle}
+        onError={(error) => {
+          console.warn('ProfileCardLow: Failed to load profile image:', user.profile_picture_url);
+        }}
       >
         {/* Gradient Overlay for Text Readability */}
         <LinearGradient
@@ -91,7 +94,10 @@ export const ProfileCardLow: React.FC<ProfileCardLowProps> = ({ user, spotifyDat
             {/* Top Artist Only */}
             {topArtist && (
               <View style={styles.artistRow}>
-                <Image source={{ uri: topArtist.image_url }} style={styles.artistImage} />
+                <Image
+                  source={{ uri: topArtist.image_url }}
+                  style={styles.artistImage}
+                />
                 <View>
                   <Text style={styles.artistLabel}>Top Artist</Text>
                   <Text style={styles.artistName}>{topArtist.name}</Text>

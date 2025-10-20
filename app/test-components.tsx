@@ -2,18 +2,21 @@
 // Visual validation for all Figma-based components
 
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Switch, Image, Dimensions, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Switch, Image, TouchableOpacity } from 'react-native';
 import { Button, Card, Tag, SettingsRow, Input } from '@components';
 import { TestTabSwitcher } from '@components/TestTabSwitcher';
+import { SpotifyButton } from '@components/SpotifyButton';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { TEST_USER, TEST_SPOTIFY_DATA, TEST_GENRES } from '@/utils';
+import { TEST_USER, TEST_SPOTIFY_DATA } from '@/utils';
 import { ProfileCardHigh } from '@/features/profile/ProfileCardHigh';
 import { ProfileCardMid } from '@/features/profile/ProfileCardMid';
 import { ProfileCardLow } from '@/features/profile/ProfileCardLow';
 import { TEST_PROFILES } from '@utils/profileCycler';
 import { useRouter } from 'expo-router';
-import { scale, verticalScale, moderateScale, getDeviceType, responsiveSizes, createResponsiveSizes, SCREEN_WIDTH, SCREEN_HEIGHT } from '@utils/responsive';
+import { scale, verticalScale, moderateScale, getDeviceType, responsiveSizes, SCREEN_WIDTH, SCREEN_HEIGHT } from '@utils/responsive';
+import { useUserStore } from '@store';
+import type { SpotifyData } from '@types';
 
 export default function TestComponentsScreen() {
   const router = useRouter();
@@ -22,9 +25,26 @@ export default function TestComponentsScreen() {
   const [inputValue, setInputValue] = useState('');
   const [switchValue, setSwitchValue] = useState(false);
 
+  // Zustand store
+  const { spotifyData, setSpotifyData } = useUserStore();
+  const [useRealData, setUseRealData] = useState(false);
+
   // Match screen state
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'high' | 'mid' | 'low'>('mid');
+
+  // Determine which data to use for profile display
+  const displaySpotifyData = useRealData && spotifyData ? spotifyData : TEST_SPOTIFY_DATA;
+  const displayUser = TEST_USER; // Keep using test user for now, only Spotify data changes
+
+  const handleSpotifySuccess = (data: SpotifyData) => {
+    setSpotifyData(data);
+    setUseRealData(true);
+  };
+
+  const handleSpotifyError = (error: Error) => {
+    console.error('Spotify error:', error);
+  };
 
   const toggleTag = (tag: string) => {
     const newSelected = new Set(selectedTags);
@@ -379,24 +399,51 @@ export default function TestComponentsScreen() {
       </Section>
 
       {/* Test Profile */}
-      <Section title="Test Profile" subtitle="Mock user data for development">
+      <Section title="Test Profile" subtitle={useRealData ? "Your Real Spotify Data" : "Mock user data for development"}>
         <Card variant="elevated">
+          {/* Data Source Toggle */}
+          <View style={styles.dataSourceToggle}>
+            <Text style={styles.dataSourceText}>
+              {useRealData ? "✅ Using Real Spotify Data" : "📋 Using Mock Data"}
+            </Text>
+            <TouchableOpacity
+              style={styles.toggleButton}
+              onPress={() => setUseRealData(!useRealData)}
+              disabled={!spotifyData}
+            >
+              <Text style={[styles.toggleButtonText, !spotifyData && styles.toggleButtonDisabled]}>
+                {useRealData ? "Switch to Mock" : "Switch to Real"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Spotify Connect Button (if no data) */}
+          {!spotifyData && (
+            <View style={styles.spotifyConnectSection}>
+              <Text style={styles.spotifyConnectText}>Connect Spotify to see your real profile data</Text>
+              <SpotifyButton
+                onSuccess={handleSpotifySuccess}
+                onError={handleSpotifyError}
+              />
+            </View>
+          )}
+
           {/* Profile Header */}
           <View style={styles.profileHeader}>
             <Image
-              source={{ uri: TEST_USER.profile_picture_url }}
+              source={{ uri: displayUser.profile_picture_url }}
               style={styles.profileAvatar}
             />
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{TEST_USER.display_name}</Text>
+              <Text style={styles.profileName}>{displayUser.display_name}</Text>
               <Text style={styles.profileMeta}>
-                {TEST_USER.age} • {TEST_USER.pronouns}
+                {displayUser.age} • {displayUser.pronouns}
               </Text>
             </View>
           </View>
 
           {/* Bio */}
-          <Text style={styles.profileBio}>{TEST_USER.bio}</Text>
+          <Text style={styles.profileBio}>{displayUser.bio}</Text>
 
           {/* Info Cards */}
           <View style={styles.profileSection}>
@@ -423,7 +470,7 @@ export default function TestComponentsScreen() {
           {/* Top Genres */}
           <Text style={styles.label}>Top Genres</Text>
           <View style={styles.tagGrid}>
-            {TEST_SPOTIFY_DATA.top_genres.map((genre) => (
+            {displaySpotifyData.top_genres.map((genre) => (
               <Tag key={genre} label={genre} selected readOnly />
             ))}
           </View>
@@ -431,7 +478,7 @@ export default function TestComponentsScreen() {
           {/* Top Artists */}
           <Text style={styles.label}>Top Artists</Text>
           <View style={styles.artistGrid}>
-            {TEST_SPOTIFY_DATA.top_artists.slice(0, 3).map((artist) => (
+            {displaySpotifyData.top_artists.slice(0, 3).map((artist) => (
               <View key={artist.id} style={styles.artistItem}>
                 <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
                 <Text style={styles.artistName} numberOfLines={1}>
@@ -539,7 +586,7 @@ export default function TestComponentsScreen() {
         <View style={styles.profileCard}>
           <Text style={styles.profileCardTitle}>HIGH DETAIL - Full Information</Text>
           <View style={styles.profileCardContainer}>
-            <ProfileCardHigh user={TEST_USER} spotifyData={TEST_SPOTIFY_DATA} />
+            <ProfileCardHigh user={displayUser} spotifyData={displaySpotifyData} />
           </View>
         </View>
 
@@ -547,7 +594,7 @@ export default function TestComponentsScreen() {
         <View style={styles.profileCard}>
           <Text style={styles.profileCardTitle}>MID DETAIL - Balanced View</Text>
           <View style={styles.profileCardContainer}>
-            <ProfileCardMid user={TEST_USER} spotifyData={TEST_SPOTIFY_DATA} />
+            <ProfileCardMid user={displayUser} spotifyData={displaySpotifyData} />
           </View>
         </View>
 
@@ -555,7 +602,7 @@ export default function TestComponentsScreen() {
         <View style={styles.profileCard}>
           <Text style={styles.profileCardTitle}>LOW DETAIL - Image-Heavy</Text>
           <View style={styles.profileCardContainerLow}>
-            <ProfileCardLow user={TEST_USER} spotifyData={TEST_SPOTIFY_DATA} />
+            <ProfileCardLow user={displayUser} spotifyData={displaySpotifyData} />
           </View>
         </View>
       </Section>
@@ -925,6 +972,54 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sizes.xs,
     color: COLORS.text.tertiary,
     fontStyle: 'italic',
+  },
+  // Data source toggle styles
+  dataSourceToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    backgroundColor: COLORS.surface,
+    borderRadius: 8,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  dataSourceText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.text.primary,
+  },
+  toggleButton: {
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.primary,
+    borderRadius: 6,
+  },
+  toggleButtonText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.text.inverse,
+  },
+  toggleButtonDisabled: {
+    opacity: 0.5,
+  },
+  spotifyConnectSection: {
+    alignItems: 'center',
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: 8,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '40',
+  },
+  spotifyConnectText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.md,
+    textAlign: 'center',
   },
   // Responsive scaling test styles
   scalingHeader: {

@@ -2,7 +2,6 @@ import { SpotifyButton } from "@components/SpotifyButton";
 import { TestTabSwitcher } from "@components/TestTabSwitcher";
 import { COLORS, SPACING, TYPOGRAPHY } from "@constants";
 import { supabase } from "@services/supabase";
-import { logoutFromSpotify } from "@services/spotify";
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import 'react-native-get-random-values';
@@ -25,6 +24,7 @@ export default function TestSupabase() {
     if (supabaseMessage === "Testing Supabase...") {
       testSupabase();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const testSupabase = async () => {

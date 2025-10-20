@@ -38,12 +38,12 @@ npm install -g expo-cli
    You can now open the app and run it locally in the Expo Go App (scan the QR code)
 
 
-## 📱 App Structure (Barebones, Sprint 3)
+## 📱 App Structure (Sprint 3 - Working Prototype)
 
-- **Match Tab** – concert buddy discovery  
-- **Concerts Tab** – explore upcoming concerts  
-- **Chat Tab** – placeholder messaging screen  
-- **Profile Tab** – configure your profile (music stats, bio, university, etc.)  
+- **Match Tab** – Concert buddy discovery (placeholder)
+- **Concerts Tab** – Explore upcoming concerts with mock data (filter tabs, save concerts)
+- **Chat Tab** – Conversation list with new matches and mock messages
+- **Profile Tab** – Configure your profile (Spotify integration, music stats, bio, university, 3 view modes)  
 
 
 ## 🔧 Tech Stack
@@ -119,3 +119,49 @@ This app uses [Supabase](https://supabase.com) as the backend for storing user p
    - This allows multiple users across devices **without login**.
 
 If you need a supabase password ask dayoungchee3@gatech.edu
+
+## 🎵 Spotify Integration
+
+Harmonize integrates with Spotify to display your music preferences and top artists.
+
+### Setup Steps
+
+1. Register your app at [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Add your redirect URI: `exp://localhost:8081/--/spotify-callback`
+3. Add your Spotify Client ID to `.env`:
+
+   ```bash
+   EXPO_PUBLIC_SPOTIFY_CLIENT_ID=your_client_id_here
+   EXPO_PUBLIC_SPOTIFY_REDIRECT_URI=exp://localhost:8081/--/spotify-callback
+   ```
+
+4. The app uses OAuth PKCE flow for secure authentication
+5. After connecting Spotify, your top artists, tracks, and genres will be displayed in your profile
+
+## 📊 Current Sprint 3 Progress (63% Complete)
+
+✅ **Completed (10/16 Phases)**
+- MVVM architecture with path aliases
+- Profile cards (High/Mid/Low detail views)
+- Spotify OAuth integration + data fetching
+- Concert screen with mock data
+- Chat screen with conversation list
+- Mock data utilities
+
+⏳ **In Progress (6/16 Phases)**
+- User state management (Zustand)
+- Profile edit form
+- View mode toggler
+- User testing infrastructure
+- Chat conversation screen
+
+## 🚧 Known Issues & Limitations
+
+- Concert images use placeholder URLs (not connected to Songkick API yet)
+- Chat messages are mock data only (no real-time messaging)
+- No user authentication (UUID-based for prototyping)
+- Matching algorithm not yet implemented
+
+## 📝 Development Notes
+
+See `CLAUDE.md` for detailed development guide and phase tracking.

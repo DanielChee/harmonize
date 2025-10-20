@@ -2,13 +2,13 @@
 // Based on Figma "Screen 1: Mid Detail Profile View"
 // Balanced view: key info, top 3 artists, condensed genres, concert preferences
 
-import React from 'react';
-import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
-import { Card, Tag, ConcertPreferencesGrid } from '@components';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@constants';
+import { Card, ConcertPreferencesGrid } from '@components';
+import { BORDER_RADIUS, COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
-import type { User, SpotifyData } from '@types';
+import type { SpotifyData, User } from '@types';
 import { responsiveSizes } from '@utils/responsive';
+import React from 'react';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 interface ProfileCardMidProps {
   user: User;
@@ -87,15 +87,6 @@ export const ProfileCardMid: React.FC<ProfileCardMidProps> = ({ user, spotifyDat
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Music Stats</Text>
 
-          {/* Spotify Hours */}
-          {user.hours_on_spotify && (
-            <View style={styles.spotifyHours}>
-              <MaterialIcons name="music-note" size={16} color={COLORS.text.primary} />
-              <Text style={styles.spotifyHoursText}>
-                {user.hours_on_spotify.toLocaleString()} hours
-              </Text>
-            </View>
-          )}
 
           {/* Top Genres (Condensed to 3) */}
           {spotifyData.top_genres.length > 0 && (
@@ -120,7 +111,13 @@ export const ProfileCardMid: React.FC<ProfileCardMidProps> = ({ user, spotifyDat
           <View style={styles.artistsRow}>
             {spotifyData.top_artists.slice(0, 3).map((artist) => (
               <View key={artist.id} style={styles.artistItem}>
-                <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
+                <Image
+                  source={{ uri: artist.image_url }}
+                  style={styles.artistImage}
+                  onError={() => {
+                    console.warn('ProfileCardMid: Failed to load artist image:', artist.name);
+                  }}
+                />
                 <Text style={styles.artistName} numberOfLines={1}>
                   {artist.name}
                 </Text>

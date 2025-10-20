@@ -16,11 +16,12 @@ export const TEST_USER: User = {
   // Basic Profile
   username: 'music_lover_21',
   display_name: 'Alex Chen',
-  bio: 'Concert enthusiast 🎸 Always looking for show buddies! Love indie, pop, and electronic. Georgia Tech CS student.',
+  bio: 'Concert enthusiast 🎸 Always looking for show buddies! Love indie, pop, and electronic. 4th year Georgia Tech student.',
   pronouns: 'they/them',
   age: 21,
   city: 'Atlanta, GA',
   university: 'Georgia Tech',
+  academic_year: '4th year',
 
   // Media
   profile_picture_url: 'https://i.pravatar.cc/300?img=12',
@@ -65,31 +66,31 @@ export const TEST_SPOTIFY_DATA: SpotifyData = {
     {
       id: 'artist-1',
       name: 'Tame Impala',
-      image_url: 'https://i.scdn.co/image/ab6761610000e5eb90357ef28b3a8b4f4cdbb9dc',
+      image_url: 'https://i.pravatar.cc/300?img=31',
       genres: ['Psychedelic Rock', 'Indie'],
     },
     {
       id: 'artist-2',
       name: 'Billie Eilish',
-      image_url: 'https://i.scdn.co/image/ab6761610000e5eb8b58edb508c43b3004f555fd',
+      image_url: 'https://i.pravatar.cc/300?img=32',
       genres: ['Pop', 'Alternative'],
     },
     {
       id: 'artist-3',
       name: 'FKJ',
-      image_url: 'https://i.scdn.co/image/ab6761610000e5eb8b58edb508c43b3004f555fd',
+      image_url: 'https://i.pravatar.cc/300?img=33',
       genres: ['Electronic', 'Jazz'],
     },
     {
       id: 'artist-4',
       name: 'NewJeans',
-      image_url: 'https://i.scdn.co/image/ab6761610000e5eb8b58edb508c43b3004f555fd',
+      image_url: 'https://i.pravatar.cc/300?img=34',
       genres: ['K-Pop', 'Pop'],
     },
     {
       id: 'artist-5',
       name: 'Mac Miller',
-      image_url: 'https://i.scdn.co/image/ab6761610000e5eb8b58edb508c43b3004f555fd',
+      image_url: 'https://i.pravatar.cc/300?img=35',
       genres: ['Hip-Hop', 'Alternative'],
     },
   ],
@@ -99,7 +100,7 @@ export const TEST_SPOTIFY_DATA: SpotifyData = {
       name: 'The Less I Know The Better',
       artist: 'Tame Impala',
       preview_url: '',
-      image_url: 'https://i.scdn.co/image/ab67616d0000b273c5649add07ed3720be9d5526',
+      image_url: 'https://i.pravatar.cc/300?img=41',
       duration_ms: 216320,
     },
     {
@@ -107,7 +108,7 @@ export const TEST_SPOTIFY_DATA: SpotifyData = {
       name: 'Bad Guy',
       artist: 'Billie Eilish',
       preview_url: '',
-      image_url: 'https://i.scdn.co/image/ab67616d0000b2732a038d3bf875d23e4aeaa84e',
+      image_url: 'https://i.pravatar.cc/300?img=42',
       duration_ms: 194087,
     },
     {
@@ -115,7 +116,7 @@ export const TEST_SPOTIFY_DATA: SpotifyData = {
       name: 'Tadow',
       artist: 'FKJ, Masego',
       preview_url: '',
-      image_url: 'https://i.scdn.co/image/ab67616d0000b273c5649add07ed3720be9d5526',
+      image_url: 'https://i.pravatar.cc/300?img=43',
       duration_ms: 226666,
     },
     {
@@ -123,7 +124,7 @@ export const TEST_SPOTIFY_DATA: SpotifyData = {
       name: 'Ditto',
       artist: 'NewJeans',
       preview_url: '',
-      image_url: 'https://i.scdn.co/image/ab67616d0000b273c5649add07ed3720be9d5526',
+      image_url: 'https://i.pravatar.cc/300?img=44',
       duration_ms: 186000,
     },
     {
@@ -131,7 +132,7 @@ export const TEST_SPOTIFY_DATA: SpotifyData = {
       name: 'Good News',
       artist: 'Mac Miller',
       preview_url: '',
-      image_url: 'https://i.scdn.co/image/ab67616d0000b273c5649add07ed3720be9d5526',
+      image_url: 'https://i.pravatar.cc/300?img=46',
       duration_ms: 329533,
     },
   ],

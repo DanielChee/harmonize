@@ -9,7 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "combine": "node ./scripts/combine-source.js"
+    "combine": "node ./scripts/combine-source.js",
+    "generate-test-data": "ts-node --project scripts/tsconfig.json -r tsconfig-paths/register scripts/generateTestProfiles.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -45,14 +46,18 @@
     "react-native-screens": "~4.16.0",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.5.1",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@types/node": "^24.8.1",
     "@types/react": "~19.1.0",
     "@types/react-native": "^0.72.8",
     "babel-plugin-module-resolver": "^5.0.2",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "~5.9.2"
   },
   "private": true

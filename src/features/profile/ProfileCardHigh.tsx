@@ -4,11 +4,10 @@
 
 import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
-import { Card, Tag, LookingForSection, ConcertPreferencesGrid } from '@components';
+import { Card, LookingForSection, ConcertPreferencesGrid } from '@components';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { User, SpotifyData } from '@types';
-import type { Concert } from '@components/profile/LookingForSection';
 import { responsiveSizes } from '@utils/responsive';
 
 interface ProfileCardHighProps {
@@ -23,9 +22,9 @@ const MOCK_MUTUAL_FRIENDS = [
   { id: '3', avatar: 'https://i.pravatar.cc/100?img=3' },
 ];
 const MOCK_CONCERT_HISTORY = [
-  { id: '1', artist: 'Phoebe Bridgers', venue: 'The Tabernacle', date: 'Oct 2024', image: 'https://i.scdn.co/image/ab67616d0000b273e' },
-  { id: '2', artist: 'Clairo', venue: 'Terminal West', date: 'Sep 2024', image: 'https://i.scdn.co/image/ab67616d0000b273f' },
-  { id: '3', artist: 'Boygenius', venue: 'State Farm Arena', date: 'Aug 2024', image: 'https://i.scdn.co/image/ab67616d0000b273g' },
+  { id: '1', artist: 'Phoebe Bridgers', venue: 'The Tabernacle', date: 'Oct 2024', image: 'https://i.pravatar.cc/300?img=51' },
+  { id: '2', artist: 'Clairo', venue: 'Terminal West', date: 'Sep 2024', image: 'https://i.pravatar.cc/300?img=52' },
+  { id: '3', artist: 'Boygenius', venue: 'State Farm Arena', date: 'Aug 2024', image: 'https://i.pravatar.cc/300?img=53' },
 ];
 const MOCK_REVIEWS = [
   { id: '1', reviewer: 'Sarah K.', rating: 5, text: 'Amazing concert buddy! We saw Taylor Swift together and had the best time. Great energy and super reliable.', date: '2 weeks ago', avatar: 'https://i.pravatar.cc/300?img=45' },
@@ -95,7 +94,10 @@ const FeaturedSong: React.FC<{ track?: SpotifyData['top_tracks'][0] }> = ({ trac
 
   return (
     <View style={styles.featuredSong}>
-      <Image source={{ uri: track.image_url }} style={styles.featuredSongImage} />
+      <Image
+        source={{ uri: track.image_url }}
+        style={styles.featuredSongImage}
+      />
       <View style={styles.featuredSongOverlay}>
         <MaterialIcons name="play-circle-filled" size={48} color={COLORS.text.inverse} />
       </View>
@@ -265,7 +267,13 @@ export const ProfileCardHigh: React.FC<ProfileCardHighProps> = ({ user, spotifyD
           <View style={styles.artistsList}>
             {spotifyData.top_artists.slice(0, 3).map((artist) => (
               <View key={artist.id} style={styles.artistItem}>
-                <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
+                <Image
+                  source={{ uri: artist.image_url }}
+                  style={styles.artistImage}
+                  onError={() => {
+                    console.warn('ProfileCardHigh: Failed to load artist image:', artist.name);
+                  }}
+                />
                 <Text style={styles.artistName} numberOfLines={2}>
                   {artist.name}
                 </Text>
@@ -282,7 +290,10 @@ export const ProfileCardHigh: React.FC<ProfileCardHighProps> = ({ user, spotifyD
           {spotifyData.top_tracks.map((track, index) => (
             <View key={track.id} style={styles.trackItem}>
               <Text style={styles.trackNumber}>{index + 1}</Text>
-              <Image source={{ uri: track.image_url }} style={styles.trackImage} />
+              <Image
+                source={{ uri: track.image_url }}
+                style={styles.trackImage}
+              />
               <View style={styles.trackInfo}>
                 <Text style={styles.trackName} numberOfLines={1}>
                   {track.name}

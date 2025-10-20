@@ -19,6 +19,7 @@ export const SpotifyButton: React.FC<SpotifyButtonProps> = ({ onSuccess, onError
   // Check authentication status on mount
   useEffect(() => {
     checkAuthStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAuthStatus = async () => {

@@ -1,5 +1,4 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { ProfileCardHigh } from "../profile/ProfileCardHigh";
@@ -9,14 +8,14 @@ import { TEST_PROFILES } from "@utils/profileCycler";
 import { fetchAllSpotifyData } from "@services/spotify/api";
 import { getValidAccessToken } from "@services/spotify/auth";
 import type { SpotifyData, User } from "@types";
-import { COLORS, SPACING, TYPOGRAPHY } from "@constants";
+import { COLORS } from "@constants";
 import { responsiveSizes } from "@utils/responsive";
 import styles from "./styles";
 
 type ViewMode = 'high' | 'mid' | 'low';
 
 export default function MatchScreen() {
-  const router = useRouter();
+  // const router = useRouter(); // TODO: Use for navigation when implementing profile details
   const [currentIndex, setCurrentIndex] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('mid');
   const [realSpotifyData, setRealSpotifyData] = useState<SpotifyData | null>(null);

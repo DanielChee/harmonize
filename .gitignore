@@ -48,3 +48,7 @@ src/docs/
 
 # Scripts
 scripts/
+
+# Markdown documentation files (except README.md)
+*.md
+!README.md

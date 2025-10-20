@@ -9,8 +9,7 @@ import { ProfileCardMid } from './ProfileCardMid';
 import { ProfileCardLow } from './ProfileCardLow';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { TEST_PROFILES } from '@utils/profileCycler';
-import { fetchAllSpotifyData } from '@services/spotify';
-import { getValidAccessToken } from '@services/spotify';
+import { fetchAllSpotifyData, getValidAccessToken } from '@services/spotify';
 import type { User, SpotifyData } from '@types';
 
 type ViewMode = 'high' | 'mid' | 'low';

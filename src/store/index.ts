@@ -1,2 +1,2 @@
 // Zustand stores
-// export * from './userStore';
+export { useUserStore, selectCurrentUser, selectSpotifyData, selectIsLoading, selectError } from './userStore';

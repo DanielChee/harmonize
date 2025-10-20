@@ -10,6 +10,12 @@ export {
   getTopTracks
 } from './api';
 
+// Re-export search functions
+export {
+  fetchArtistByName, fetchTrackByName, getArtist, getTrack, searchArtists,
+  searchTracks
+} from './search';
+
 // Re-export types
 export type {
   ArtistObject, ImageObject, PagingObject, PrivateUserObject, SimplifiedAlbumObject, SimplifiedArtistObject, SpotifyAuthConfig,
