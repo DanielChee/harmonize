@@ -164,4 +164,4 @@ Harmonize integrates with Spotify to display your music preferences and top arti
 
 ## 📝 Development Notes
 
-See `CLAUDE.md` for detailed development guide and phase tracking.
+For development guides and implementation details, refer to the project documentation.
