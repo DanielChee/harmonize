@@ -1,6 +1,6 @@
 // Pass: 
-import { Tabs } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
 
 export default function TabsLayout() {
   return (
@@ -32,9 +32,9 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="meet"
         options={{
-          title: "Chat",
+          title: "Meet",
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="chat-outline" size={size} color={color} />
           ),

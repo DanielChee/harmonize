@@ -195,7 +195,7 @@ export interface MatchStore {
   error: string | null;
 }
 
-export interface ChatStore {
+export interface MeetStore {
   conversations: Record<string, Message[]>;
   activeConversation: string | null;
   typingUsers: Record<string, boolean>;
@@ -236,7 +236,7 @@ export interface ConcertCardProps {
 export interface TabParamList {
   match: undefined;
   concerts: undefined;
-  chat: undefined;
+  meet: undefined;
   profile: undefined;
 }
 
@@ -244,7 +244,7 @@ export interface RootStackParamList {
   '(tabs)': undefined;
   'profile-setup': undefined;
   'spotify-auth': undefined;
-  'chat-detail': { matchId: string };
+  'meet-detail': { matchId: string };
   'profile-detail': { userId: string };
   'concert-detail': { concertId: string };
 }

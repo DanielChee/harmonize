@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { ConcertCard } from '@components/concerts/ConcertCard';
-import { MOCK_CONCERTS } from '@utils/mockConcerts';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import type { MockConcert } from '@utils/mockConcerts';
+import { MOCK_CONCERTS } from '@utils/mockConcerts';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ConcertsScreen() {
   const [concerts, setConcerts] = useState<MockConcert[]>(MOCK_CONCERTS);
@@ -26,6 +26,7 @@ export default function ConcertsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       {/* Header */}
+      <View style={{padding: 15 }}></View>
       <View style={styles.header}>
         <Text style={styles.title}>Concerts</Text>
         <Text style={styles.subtitle}>

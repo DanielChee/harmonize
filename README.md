@@ -42,7 +42,7 @@ npm install -g expo-cli
 
 - **Match Tab** – Concert buddy discovery (placeholder)
 - **Concerts Tab** – Explore upcoming concerts with mock data (filter tabs, save concerts)
-- **Chat Tab** – Conversation list with new matches and mock messages
+- **Meet Tab** – Conversation list with new matches and mock messages
 - **Profile Tab** – Configure your profile (Spotify integration, music stats, bio, university, 3 view modes)  
 
 
@@ -145,7 +145,7 @@ Harmonize integrates with Spotify to display your music preferences and top arti
 - Profile cards (High/Mid/Low detail views)
 - Spotify OAuth integration + data fetching
 - Concert screen with mock data
-- Chat screen with conversation list
+- Meet screen with conversation list
 - Mock data utilities
 
 ⏳ **In Progress (6/16 Phases)**
@@ -153,12 +153,12 @@ Harmonize integrates with Spotify to display your music preferences and top arti
 - Profile edit form
 - View mode toggler
 - User testing infrastructure
-- Chat conversation screen
+- Meet conversation screen
 
 ## 🚧 Known Issues & Limitations
 
 - Concert images use placeholder URLs (not connected to Songkick API yet)
-- Chat messages are mock data only (no real-time messaging)
+- Meet messages are mock data only (no real-time messaging)
 - No user authentication (UUID-based for prototyping)
 - Matching algorithm not yet implemented
 

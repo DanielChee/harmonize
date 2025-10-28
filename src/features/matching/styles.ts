@@ -1,11 +1,12 @@
-import { StyleSheet } from "react-native";
 import { COLORS, SPACING, TYPOGRAPHY } from "@constants";
 import { responsiveSizes } from "@utils/responsive";
+import { StyleSheet } from "react-native";
 
 export default StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+    paddingTop: SPACING.lg,
   },
   header: {
     flexDirection: 'row',

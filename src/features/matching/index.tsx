@@ -1,15 +1,15 @@
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
-import { useEffect, useState } from "react";
+import { COLORS } from "@constants";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
-import { ProfileCardHigh } from "../profile/ProfileCardHigh";
-import { ProfileCardMid } from "../profile/ProfileCardMid";
-import { ProfileCardLow } from "../profile/ProfileCardLow";
-import { TEST_PROFILES } from "@utils/profileCycler";
 import { fetchAllSpotifyData } from "@services/spotify/api";
 import { getValidAccessToken } from "@services/spotify/auth";
 import type { SpotifyData, User } from "@types";
-import { COLORS } from "@constants";
+import { TEST_PROFILES } from "@utils/profileCycler";
 import { responsiveSizes } from "@utils/responsive";
+import { useEffect, useState } from "react";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ProfileCardHigh } from "../profile/ProfileCardHigh";
+import { ProfileCardLow } from "../profile/ProfileCardLow";
+import { ProfileCardMid } from "../profile/ProfileCardMid";
 import styles from "./styles";
 
 type ViewMode = 'high' | 'mid' | 'low';
