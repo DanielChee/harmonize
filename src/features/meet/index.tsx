@@ -14,7 +14,7 @@ export default function MeetScreen() {
 
   const futureMatches = users.filter(u => new Date(u.concertDate) > now);
   const pastUnreviewed = users.filter(u => new Date(u.concertDate) <= now && u.review === null);
-  const pastReviewed   = users.filter(u => new Date(u.concertDate) <= now && u.review !== null);
+  const pastReviewed = users.filter(u => new Date(u.concertDate) <= now && u.review !== null);
 
   const handleSubmitReview = (id: string, review: Review) => {
     setUsers(prev => prev.map(u => (u.id === id ? { ...u, review } : u)));
@@ -35,45 +35,27 @@ export default function MeetScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* FUTURE MATCHES */}
-      <Text style={styles.section}>Upcoming Matches</Text>
+      <Text style={styles.section}>🎟️ Upcoming Matches</Text>
       {futureMatches.map(u => (
-        <ConversationListItem
-          key={u.id}
-          matchedUser={u}
-          reviewVersion={reviewVersion}
-          onSubmitReview={handleSubmitReview}
-        />
+        <ConversationListItem key={u.id} matchedUser={u} reviewVersion={reviewVersion} onSubmitReview={handleSubmitReview} />
       ))}
 
-      {/* PAST MATCHES - UNREVIEWED (Dropdown) */}
       <TouchableOpacity onPress={() => setShowUnreviewed(!showUnreviewed)} style={styles.dropdownHeader}>
-        <Text style={styles.section}>Past Matches (Unreviewed)</Text>
+        <Text style={styles.section}>🕓 Past Matches (Unreviewed)</Text>
         <Text style={styles.chevron}>{showUnreviewed ? '▲' : '▼'}</Text>
       </TouchableOpacity>
       {showUnreviewed &&
         pastUnreviewed.map(u => (
-          <ConversationListItem
-            key={u.id}
-            matchedUser={u}
-            reviewVersion={reviewVersion}
-            onSubmitReview={handleSubmitReview}
-          />
+          <ConversationListItem key={u.id} matchedUser={u} reviewVersion={reviewVersion} onSubmitReview={handleSubmitReview} />
         ))}
 
-      {/* PAST MATCHES - REVIEWED (Dropdown) */}
       <TouchableOpacity onPress={() => setShowReviewed(!showReviewed)} style={styles.dropdownHeader}>
-        <Text style={styles.section}>Past Matches (Reviewed)</Text>
+        <Text style={styles.section}>✅ Past Matches (Reviewed)</Text>
         <Text style={styles.chevron}>{showReviewed ? '▲' : '▼'}</Text>
       </TouchableOpacity>
       {showReviewed &&
         pastReviewed.map(u => (
-          <ConversationListItem
-            key={u.id}
-            matchedUser={u}
-            reviewVersion={reviewVersion}
-            onSubmitReview={handleSubmitReview}
-          />
+          <ConversationListItem key={u.id} matchedUser={u} reviewVersion={reviewVersion} onSubmitReview={handleSubmitReview} />
         ))}
 
       <View style={{ height: SPACING.xl }} />
@@ -85,17 +67,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background, paddingTop: SPACING.lg },
   title: { fontSize: TYPOGRAPHY.sizes['3xl'], fontWeight: TYPOGRAPHY.weights.bold, color: COLORS.text.primary, textAlign: 'center' },
   subtitle: { fontSize: TYPOGRAPHY.sizes.sm, color: COLORS.text.secondary, textAlign: 'center', marginBottom: SPACING.md },
-
-  section: { fontSize: TYPOGRAPHY.sizes.lg, color: COLORS.primary, fontWeight: TYPOGRAPHY.weights.semibold, marginLeft: SPACING.lg, marginTop: SPACING.md, marginBottom: SPACING.xs },
-
+  section: { fontSize: TYPOGRAPHY.sizes.lg, color: COLORS.primary, fontWeight: TYPOGRAPHY.weights.semibold, marginLeft: SPACING.lg, marginTop: SPACING.md },
   switchButton: { backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 },
   switchText: { color: COLORS.text.inverse, fontWeight: TYPOGRAPHY.weights.semibold },
-
-  dropdownHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingRight: SPACING.lg,
-  },
+  dropdownHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: SPACING.lg },
   chevron: { marginRight: SPACING.xs, color: COLORS.text.secondary, fontSize: TYPOGRAPHY.sizes.base },
 });
