@@ -1,4 +1,6 @@
 // Core type definitions for Harmonize app
+// Import SpotifyData for use in this file
+import type { SpotifyData } from './spotify-types';
 
 export interface User {
   id: string;
@@ -48,43 +50,14 @@ export interface User {
   last_active?: string;
 }
 
-export interface SpotifyData {
-  id?: string;
-  profile_id?: string;
-  spotify_user_id: string;
-  spotify_username?: string;
-
-  // Music Data
-  top_genres: string[];
-  top_artists: SpotifyArtist[];
-  top_tracks: SpotifyTrack[];
-
-  // Listening Habits
-  total_listening_time?: number;
-  most_active_listening_time?: 'morning' | 'afternoon' | 'evening' | 'night';
-
-  // Real-time Data
-  recent_tracks?: SpotifyTrack[];
-  currently_playing?: SpotifyTrack | null;
-
-  last_spotify_sync?: string;
-}
-
-export interface SpotifyArtist {
-  id: string;
-  name: string;
-  image_url: string;
-  genres?: string[];
-}
-
-export interface SpotifyTrack {
-  id: string;
-  name: string;
-  artist: string;
-  preview_url: string;
-  image_url: string;
-  duration_ms: number;
-}
+// Re-export Spotify types from spotify-types.ts
+export type {
+  SpotifyData,
+  SpotifyArtist,
+  SpotifyTrack,
+  ArtistObject,
+  TrackObject
+} from './spotify-types';
 
 export interface Match {
   id: string;

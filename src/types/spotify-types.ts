@@ -126,11 +126,33 @@ export interface SpotifyAuthConfig {
   scopes: string[];
 }
 
+// App's simplified artist type (for UI display)
+export interface SpotifyArtist {
+  id: string;
+  name: string;
+  image_url: string;
+  genres?: string[];
+}
+
+// App's simplified track type (for UI display)
+export interface SpotifyTrack {
+  id: string;
+  name: string;
+  artist: string;
+  preview_url: string;
+  image_url: string;
+  duration_ms: number;
+}
+
+// User's Spotify data (matches database schema)
 export interface SpotifyData {
-  spotifyUserId: string;
-  topArtists: ArtistObject[];
-  topTracks: TrackObject[];
-  topGenres: string[];
-  listeningHours?: number;
-  lastSyncedAt: string;
+  id?: string;
+  profile_id?: string;
+  spotify_user_id: string;
+  spotify_username?: string;
+  top_genres: string[];
+  top_artists: SpotifyArtist[];
+  top_tracks: SpotifyTrack[];
+  total_listening_time?: number;
+  last_spotify_sync?: string;
 }

@@ -139,11 +139,6 @@ export const TEST_SPOTIFY_DATA: SpotifyData = {
 
   // Listening Habits
   total_listening_time: 1247,
-  most_active_listening_time: 'evening',
-
-  // Real-time Data
-  recent_tracks: [],
-  currently_playing: null,
 
   last_spotify_sync: new Date().toISOString(),
 };

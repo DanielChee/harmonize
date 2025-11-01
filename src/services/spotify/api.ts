@@ -179,9 +179,6 @@ export const fetchAllSpotifyData = async (): Promise<SpotifyData> => {
       top_artists: topArtists,
       top_tracks: topTracks,
       total_listening_time: totalListeningTime,
-      most_active_listening_time: 'evening', // Default value (could be calculated from listening history)
-      recent_tracks: [], // Would need separate API call
-      currently_playing: null, // Would need separate API call
       last_spotify_sync: new Date().toISOString(),
     };
   } catch (error) {
