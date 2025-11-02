@@ -1,3 +1,16 @@
+/**
+ * DEVELOPMENT DATA - A/B Testing Review System
+ *
+ * Mock Meets & Review System Data
+ *
+ * Contains 7 test users for Sprint 4 A/B testing of the review system.
+ * Used in the Meet/DMs tab to demonstrate:
+ * - Review Type A: 1-5 star rating + comment
+ * - Review Type B: 3-question survey (5-star each) + "Did you harmonize?" toggle
+ *
+ * Test profiles cover: upcoming matches, past unreviewed, and past reviewed states.
+ */
+
 export interface ReviewTypeA {
   type: 'A';
   rating: number;

@@ -1,5 +1,12 @@
-// Test data for component development and testing
-// Mock user profiles with realistic data
+/**
+ * DEVELOPMENT DATA - For Testing Only
+ *
+ * Test data for component development and testing
+ * Mock user profiles with realistic Spotify data
+ *
+ * Used for visual validation during development.
+ * Not used in production - see profileCycler.ts for match screen test profiles.
+ */
 
 import type { User, SpotifyData } from '@types';
 

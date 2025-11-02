@@ -1,3 +1,12 @@
+/**
+ * DEVELOPMENT ONLY - NOT FOR PRODUCTION
+ *
+ * Supabase + Spotify Integration Test Screen
+ *
+ * This screen is for testing database and API integration during development.
+ * Located in app/(dev)/ to separate from production code.
+ */
+
 import { SpotifyButton } from "@components/SpotifyButton";
 import { TestTabSwitcher } from "@components/TestTabSwitcher";
 import { COLORS, SPACING, TYPOGRAPHY } from "@constants";
@@ -7,12 +16,9 @@ import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from "uuid";
-import type { SpotifyData } from "../src/types";
+import type { SpotifyData } from "@types";
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-
-
-// TEST PAGE: Supabase + Spotify Integration
 
 export default function TestSupabase() {
   const router = useRouter();

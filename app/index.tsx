@@ -1,9 +1,10 @@
 import { Redirect } from "expo-router";
 
 export default function Index() {
-  // Temporarily redirect to test screen for component validation
-  return <Redirect href="/test-components" />;
+  // Production: Open on Match tab (profile cycling)
+  return <Redirect href="/(tabs)/match" />;
 
-  // Original redirect (restore this after testing):
-  // return <Redirect href="/match" />;
+  // Development screens available at:
+  // - app/(dev)/test-components - Component gallery
+  // - app/(dev)/test-supabase - Database/API testing
 }

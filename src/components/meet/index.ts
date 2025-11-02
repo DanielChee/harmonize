@@ -1,1 +1,1 @@
-export { ConversationListItem } from './ConversationListItem';
+export { default as ConversationListItem } from './ConversationListItem';

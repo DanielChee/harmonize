@@ -1,5 +1,12 @@
-// Profile Cycling System
-// Manages cycling through test profiles + real Spotify data
+/**
+ * DEVELOPMENT DATA - Match Screen Test Profiles
+ *
+ * Profile Cycling System
+ * Manages cycling through test profiles + real Spotify data
+ *
+ * Contains 3 realistic test profiles used in the Match tab.
+ * These profiles are shown alongside the user's real Spotify profile (if connected).
+ */
 
 import type { User, SpotifyData } from '@types';
 

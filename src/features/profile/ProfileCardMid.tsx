@@ -1,6 +1,14 @@
-// ProfileCardMid - Mid Detail Profile View
-// Based on Figma "Screen 1: Mid Detail Profile View"
-// Balanced view: key info, top 3 artists, condensed genres, concert preferences
+/**
+ * ARCHIVED - Sprint 3 variant, not used in production
+ *
+ * ProfileCardMid - Mid Detail Profile View
+ * Based on Figma "Screen 1: Mid Detail Profile View"
+ * Balanced view: key info, top 3 artists, condensed genres, concert preferences
+ *
+ * This component was part of Sprint 3 A/B testing for profile detail levels.
+ * Production app now uses only ProfileCardHigh (full detail view).
+ * Preserved for reference and potential future use.
+ */
 
 import { Card, ConcertPreferencesGrid } from '@components';
 import { BORDER_RADIUS, COLORS, SPACING, TYPOGRAPHY } from '@constants';

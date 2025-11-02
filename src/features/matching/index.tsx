@@ -1,5 +1,5 @@
 import { COLORS } from "@constants";
-import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { fetchAllSpotifyData } from "@services/spotify/api";
 import { getValidAccessToken } from "@services/spotify/auth";
 import type { SpotifyData, User } from "@types";
@@ -8,16 +8,19 @@ import { responsiveSizes } from "@utils/responsive";
 import { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { ProfileCardHigh } from "../profile/ProfileCardHigh";
-import { ProfileCardLow } from "../profile/ProfileCardLow";
-import { ProfileCardMid } from "../profile/ProfileCardMid";
+// NOTE: Mid/Low profile cards archived - Sprint 3 variants, not used in production
+// import { ProfileCardLow } from "../profile/ProfileCardLow";
+// import { ProfileCardMid } from "../profile/ProfileCardMid";
 import styles from "./styles";
 
-type ViewMode = 'high' | 'mid' | 'low';
+// Production: Only use high-detail view
+// type ViewMode = 'high' | 'mid' | 'low';
 
 export default function MatchScreen() {
   // const router = useRouter(); // TODO: Use for navigation when implementing profile details
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>('mid');
+  // Production: Always use high-detail view
+  // const [viewMode, setViewMode] = useState<ViewMode>('mid');
   const [realSpotifyData, setRealSpotifyData] = useState<SpotifyData | null>(null);
 
   // Load real Spotify data if available
@@ -59,12 +62,13 @@ export default function MatchScreen() {
     handlePrevious();
   };
 
-  const cycleViewMode = () => {
-    const modes: ViewMode[] = ['high', 'mid', 'low'];
-    const currentModeIndex = modes.indexOf(viewMode);
-    const nextMode = modes[(currentModeIndex + 1) % modes.length];
-    setViewMode(nextMode);
-  };
+  // Production: View mode cycling removed - only high-detail view used
+  // const cycleViewMode = () => {
+  //   const modes: ViewMode[] = ['high', 'mid', 'low'];
+  //   const currentModeIndex = modes.indexOf(viewMode);
+  //   const nextMode = modes[(currentModeIndex + 1) % modes.length];
+  //   setViewMode(nextMode);
+  // };
 
   // Get current profile data
   const getCurrentProfile = (): { user: User; spotify: SpotifyData } | null => {
@@ -104,18 +108,12 @@ export default function MatchScreen() {
     );
   }
 
-  const viewModeLabel = viewMode === 'high' ? 'High Detail' : viewMode === 'mid' ? 'Mid Detail' : 'Low Detail';
   const isSpotifyProfile = currentIndex === TEST_PROFILES.length && realSpotifyData;
 
   return (
     <View style={styles.container}>
-      {/* Header with view mode toggle */}
+      {/* Header with profile counter */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.viewModeButton} onPress={cycleViewMode}>
-          <MaterialIcons name="remove-red-eye" size={responsiveSizes.icon.medium} color={COLORS.primary} />
-          <Text style={styles.viewModeText}>{viewModeLabel}</Text>
-        </TouchableOpacity>
-
         <View style={styles.profileCounter}>
           <Text style={styles.counterText}>
             {isSpotifyProfile ? 'Your Spotify Profile' : `Profile ${currentIndex + 1} / ${totalProfiles}`}
@@ -123,24 +121,11 @@ export default function MatchScreen() {
         </View>
       </View>
 
-      {/* Profile Card - Wrapped in container to constrain dimensions */}
+      {/* Profile Card - High detail only, scrollable */}
       <View style={styles.cardContainer}>
-        {viewMode === 'low' ? (
-          // Low detail: Full screen, no scroll (Tinder-style)
-          <View style={styles.cardFullScreen}>
-            <ProfileCardLow user={currentProfile.user} spotifyData={currentProfile.spotify} />
-          </View>
-        ) : (
-          // High/Mid detail: Scrollable content
-          <ScrollView style={styles.cardScrollView} showsVerticalScrollIndicator={false}>
-            {viewMode === 'high' && (
-              <ProfileCardHigh user={currentProfile.user} spotifyData={currentProfile.spotify} />
-            )}
-            {viewMode === 'mid' && (
-              <ProfileCardMid user={currentProfile.user} spotifyData={currentProfile.spotify} />
-            )}
-          </ScrollView>
-        )}
+        <ScrollView style={styles.cardScrollView} showsVerticalScrollIndicator={false}>
+          <ProfileCardHigh user={currentProfile.user} spotifyData={currentProfile.spotify} />
+        </ScrollView>
 
         {/* Floating Action Buttons Overlay */}
         <View style={styles.floatingButtonsContainer}>

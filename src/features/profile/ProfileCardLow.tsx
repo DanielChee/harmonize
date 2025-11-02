@@ -1,6 +1,14 @@
-// ProfileCardLow - Low Detail Profile View
-// Image-heavy, minimal text design for fast browsing (Instagram-story style)
-// Emphasis on photos, top artist only, truncated bio
+/**
+ * ARCHIVED - Sprint 3 variant, not used in production
+ *
+ * ProfileCardLow - Low Detail Profile View
+ * Image-heavy, minimal text design for fast browsing (Instagram-story style)
+ * Emphasis on photos, top artist only, truncated bio
+ *
+ * This component was part of Sprint 3 A/B testing for profile detail levels.
+ * Production app now uses only ProfileCardHigh (full detail view).
+ * Preserved for reference and potential future use.
+ */
 
 import React from 'react';
 import { View, Text, Image, StyleSheet, ImageBackground } from 'react-native';

@@ -1,4 +1,12 @@
-// Mock concert data for development and testing
+/**
+ * DEVELOPMENT DATA - Mock Concert Listings
+ *
+ * Mock concert data for the Concerts tab
+ *
+ * Contains realistic concert listings used in the Concerts screen.
+ * Used for demonstration until real concert API integration (Songkick/Ticketmaster).
+ */
+
 export interface MockConcert {
   id: string;
   artist: string;

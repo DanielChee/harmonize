@@ -1,5 +1,12 @@
-// Component Test Screen
-// Visual validation for all Figma-based components
+/**
+ * DEVELOPMENT ONLY - NOT FOR PRODUCTION
+ *
+ * Component Test Screen
+ * Visual validation for all Figma-based components
+ *
+ * This screen is for development/testing purposes only.
+ * Located in app/(dev)/ to separate from production code.
+ */
 
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Switch, Image, TouchableOpacity } from 'react-native';
