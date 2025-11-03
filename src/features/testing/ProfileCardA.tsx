@@ -4,18 +4,90 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import { Card, LookingForSection, ConcertPreferencesGrid } from '@components';
+import { MaterialIcons } from '@expo/vector-icons';
 import type { TestProfile } from '@types';
-import { COLORS, SPACING, BORDER_RADIUS } from '@constants';
+import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from '@constants';
+import { responsiveSizes } from '@utils/responsive';
 
 interface ProfileCardAProps {
   profile: TestProfile;
 }
 
+// Mock data for high profile elements
+const MOCK_MUTUAL_FRIENDS = [
+  { id: '1', avatar: 'https://i.pravatar.cc/100?img=1' },
+  { id: '2', avatar: 'https://i.pravatar.cc/100?img=2' },
+  { id: '3', avatar: 'https://i.pravatar.cc/100?img=3' },
+];
+
+const MOCK_SPOTIFY_DATA = {
+  top_genres: ['indie pop', 'bedroom pop', 'indie folk'],
+  top_artists: [
+    { id: '1', name: 'Phoebe Bridgers', image_url: 'https://i.pravatar.cc/300?img=51' },
+    { id: '2', name: 'Clairo', image_url: 'https://i.pravatar.cc/300?img=52' },
+    { id: '3', name: 'boygenius', image_url: 'https://i.pravatar.cc/300?img=53' },
+  ],
+  top_tracks: [
+    { id: '1', name: 'Kyoto', artist: 'Phoebe Bridgers', image_url: 'https://i.pravatar.cc/300?img=54', duration_ms: 213000 },
+    { id: '2', name: 'Bags', artist: 'Clairo', image_url: 'https://i.pravatar.cc/300?img=55', duration_ms: 195000 },
+    { id: '3', name: 'Not Strong Enough', artist: 'boygenius', image_url: 'https://i.pravatar.cc/300?img=56', duration_ms: 245000 },
+  ],
+  featured_track: { id: '1', name: 'Kyoto', artist: 'Phoebe Bridgers', image_url: 'https://i.pravatar.cc/300?img=54', duration_ms: 213000 },
+};
+
+const MOCK_CONCERT_HISTORY = [
+  { id: '1', artist: 'Phoebe Bridgers', venue: 'The Tabernacle', date: 'Oct 2024', image: 'https://i.pravatar.cc/300?img=51' },
+  { id: '2', artist: 'Clairo', venue: 'Terminal West', date: 'Sep 2024', image: 'https://i.pravatar.cc/300?img=52' },
+  { id: '3', artist: 'boygenius', venue: 'State Farm Arena', date: 'Aug 2024', image: 'https://i.pravatar.cc/300?img=53' },
+];
+
+const MOCK_SPOTIFY_HOURS = 45234;
+
+/**
+ * Featured Song Component
+ */
+const FeaturedSong: React.FC<{ track: typeof MOCK_SPOTIFY_DATA.featured_track }> = ({ track }) => {
+  return (
+    <View style={styles.featuredSong}>
+      <Image source={{ uri: track.image_url }} style={styles.featuredSongImage} />
+      <View style={styles.featuredSongOverlay}>
+        <MaterialIcons name="play-circle-filled" size={48} color={COLORS.text.inverse} />
+      </View>
+      <View style={styles.featuredSongInfo}>
+        <Text style={styles.featuredSongLabel}>Featured Song</Text>
+        <Text style={styles.featuredSongName} numberOfLines={1}>{track.name}</Text>
+        <Text style={styles.featuredSongArtist} numberOfLines={1}>{track.artist}</Text>
+      </View>
+      <View style={styles.waveform}>
+        {[...Array(25)].map((_, i) => (
+          <View key={i} style={[styles.waveformBar, { height: Math.random() * 24 + 8 }]} />
+        ))}
+      </View>
+    </View>
+  );
+};
+
+/**
+ * Concert History Item Component
+ */
+const ConcertHistoryItem: React.FC<{ concert: typeof MOCK_CONCERT_HISTORY[0] }> = ({ concert }) => {
+  return (
+    <View style={styles.concertHistoryCard}>
+      <Image source={{ uri: concert.image }} style={styles.concertHistoryCardImage} />
+      <View style={styles.concertHistoryCardOverlay}>
+        <Text style={styles.concertHistoryCardArtist} numberOfLines={1}>{concert.artist}</Text>
+        <Text style={styles.concertHistoryCardDate}>{concert.date}</Text>
+      </View>
+    </View>
+  );
+};
+
 export function ProfileCardA({ profile }: ProfileCardAProps) {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
+      {/* Header with Mutual Friends */}
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{profile.name[0]}</Text>
@@ -25,45 +97,172 @@ export function ProfileCardA({ profile }: ProfileCardAProps) {
           <Text style={styles.meta}>
             {profile.age} • {profile.pronouns}
           </Text>
+          {profile.universityVerified && (
+            <View style={styles.verifiedBadge}>
+              <MaterialIcons name="verified" size={16} color={COLORS.success} />
+              <Text style={styles.verifiedText}>Verified</Text>
+            </View>
+          )}
+          {/* Mutual Friends */}
+          {MOCK_MUTUAL_FRIENDS.length > 0 && (
+            <View style={styles.mutualFriends}>
+              <View style={styles.mutualFriendsAvatars}>
+                {MOCK_MUTUAL_FRIENDS.slice(0, 3).map((friend, index) => (
+                  <Image
+                    key={friend.id}
+                    source={{ uri: friend.avatar }}
+                    style={[styles.mutualFriendAvatar, index > 0 && { marginLeft: -8 }]}
+                  />
+                ))}
+              </View>
+              <Text style={styles.mutualFriendsText}>
+                {MOCK_MUTUAL_FRIENDS.length} mutual {MOCK_MUTUAL_FRIENDS.length === 1 ? 'friend' : 'friends'}
+              </Text>
+            </View>
+          )}
         </View>
-        {profile.universityVerified && (
-          <View style={styles.verifiedBadge}>
-            <Text style={styles.verifiedText}>✓</Text>
-          </View>
-        )}
       </View>
+
+      {/* Looking For Section */}
+      <LookingForSection
+        concert={{
+          id: '1',
+          artist: 'Taylor Swift',
+          venue: 'Mercedes-Benz Stadium',
+          date: 'Dec 15, 2025',
+        }}
+        lookingForBuddy={true}
+      />
 
       {/* Bio */}
-      <View style={styles.section}>
+      <Card style={styles.section}>
         <Text style={styles.sectionTitle}>About</Text>
         <Text style={styles.bio}>{profile.bio}</Text>
-      </View>
+      </Card>
 
       {/* Info Cards */}
-      <View style={styles.section}>
+      <Card style={styles.section}>
         <View style={styles.infoGrid}>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>University</Text>
-            <Text style={styles.infoValue}>{profile.university}</Text>
-          </View>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Concerts</Text>
-            <Text style={styles.infoValue}>{profile.concertsAttended}</Text>
+          <Card
+            icon={<MaterialIcons name="school" size={20} color="rgba(0,0,0,0.8)" />}
+            badge={profile.universityVerified ? <MaterialIcons name="verified" size={16} color={COLORS.success} /> : undefined}
+          >
+            <Text style={styles.infoText}>{profile.university}</Text>
+          </Card>
+          <Card icon={<MaterialIcons name="confirmation-number" size={20} color="rgba(0,0,0,0.8)" />}>
+            <Text style={styles.infoText}>{profile.concertsAttended} concerts</Text>
+          </Card>
+        </View>
+      </Card>
+
+      {/* Featured Song */}
+      <Card style={styles.section}>
+        <FeaturedSong track={MOCK_SPOTIFY_DATA.featured_track} />
+      </Card>
+
+      {/* Music Stats */}
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>My Music Stats</Text>
+        <View style={styles.spotifyHours}>
+          <MaterialIcons name="music-note" size={20} color={COLORS.text.primary} />
+          <Text style={styles.spotifyHoursText}>
+            Spotify Hours: {MOCK_SPOTIFY_HOURS.toLocaleString()}
+          </Text>
+        </View>
+        <View style={styles.genresSection}>
+          <Text style={styles.subsectionTitle}>Top Genres</Text>
+          <View style={styles.genresList}>
+            {MOCK_SPOTIFY_DATA.top_genres.map((genre, index) => (
+              <View key={`${genre}-${index}`} style={styles.genreBorderedTag}>
+                <Text style={styles.genreTagText}>{genre}</Text>
+              </View>
+            ))}
           </View>
         </View>
-      </View>
+      </Card>
+
+      {/* Top Artists */}
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Top Artists</Text>
+        <View style={styles.artistsList}>
+          {MOCK_SPOTIFY_DATA.top_artists.map((artist) => (
+            <View key={artist.id} style={styles.artistItem}>
+              <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
+              <Text style={styles.artistName} numberOfLines={2}>{artist.name}</Text>
+            </View>
+          ))}
+        </View>
+      </Card>
+
+      {/* Top Tracks */}
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Top Tracks</Text>
+        {MOCK_SPOTIFY_DATA.top_tracks.map((track, index) => (
+          <View key={track.id} style={styles.trackItem}>
+            <Text style={styles.trackNumber}>{index + 1}</Text>
+            <Image source={{ uri: track.image_url }} style={styles.trackImage} />
+            <View style={styles.trackInfo}>
+              <Text style={styles.trackName} numberOfLines={1}>{track.name}</Text>
+              <Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
+            </View>
+            <View style={styles.trackDuration}>
+              <Text style={styles.trackDurationText}>
+                {Math.floor(track.duration_ms / 60000)}:
+                {String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </Card>
+
+      {/* Concert History */}
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Concert History</Text>
+        <Text style={styles.subsectionTitle}>Recently Attended Shows</Text>
+        <View style={styles.concertHistoryGrid}>
+          {MOCK_CONCERT_HISTORY.map((concert) => (
+            <ConcertHistoryItem key={concert.id} concert={concert} />
+          ))}
+        </View>
+      </Card>
+
+      {/* Credentials */}
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Credentials</Text>
+        <View style={styles.vouchesGrid}>
+          <View style={styles.vouchItem}>
+            <View style={styles.vouchIcon}>
+              <MaterialIcons name="confirmation-number" size={32} color={COLORS.primary} />
+            </View>
+            <Text style={styles.vouchCount}>{profile.concertsAttended}</Text>
+            <Text style={styles.vouchLabel}>Concerts</Text>
+          </View>
+          <View style={styles.vouchItem}>
+            <View style={styles.vouchIcon}>
+              <MaterialIcons name="verified-user" size={32} color={COLORS.success} />
+            </View>
+            <Text style={styles.vouchCount}>✓</Text>
+            <Text style={styles.vouchLabel}>Verified</Text>
+          </View>
+          <View style={styles.vouchItem}>
+            <View style={styles.vouchIcon}>
+              <MaterialIcons name="star" size={32} color={COLORS.warning} />
+            </View>
+            <Text style={styles.vouchCount}>{profile.averageRatingTypeA.toFixed(1)}</Text>
+            <Text style={styles.vouchLabel}>Rating</Text>
+          </View>
+        </View>
+      </Card>
 
       {/* Reviews Section */}
-      <View style={styles.section}>
+      <Card style={styles.section}>
         <View style={styles.reviewsHeader}>
-          <Text style={styles.sectionTitle}>Reviews ({profile.totalReviews})</Text>
+          <Text style={styles.sectionTitle}>Reviews</Text>
           <View style={styles.ratingDisplay}>
             <Text style={styles.ratingNumber}>{profile.averageRatingTypeA.toFixed(1)}</Text>
             <Text style={styles.star}>★</Text>
           </View>
         </View>
-
-        {/* Review List */}
         {profile.reviewsTypeA.map((review, index) => (
           <View key={index} style={styles.reviewCard}>
             <View style={styles.reviewHeader}>
@@ -80,7 +279,21 @@ export function ProfileCardA({ profile }: ProfileCardAProps) {
             <Text style={styles.reviewDate}>{review.daysAgo} days ago</Text>
           </View>
         ))}
-      </View>
+      </Card>
+
+      {/* Concert Preferences */}
+      <Card style={styles.section}>
+        <Text style={styles.sectionTitle}>Concert Preferences</Text>
+        <ConcertPreferencesGrid
+          budget="budget-friendly"
+          seating="seated"
+          transport="can-drive"
+          matching="flexible"
+        />
+      </Card>
+
+      {/* Bottom Spacing */}
+      <View style={styles.bottomSpacing} />
     </ScrollView>
   );
 }
@@ -92,17 +305,18 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    paddingHorizontal: '5%',
+    paddingVertical: SPACING.md,
     alignItems: 'center',
-    padding: SPACING.lg,
-    gap: SPACING.md,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: responsiveSizes.avatar.large,
+    height: responsiveSizes.avatar.large,
+    borderRadius: responsiveSizes.avatar.large / 2,
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: SPACING.md,
   },
   avatarText: {
     fontSize: 32,
@@ -113,65 +327,301 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY.sizes['2xl'],
+    fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.text.primary,
-    marginBottom: 4,
   },
   meta: {
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.sizes.base,
     color: COLORS.text.secondary,
+    marginTop: SPACING.xs,
   },
   verifiedBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.success,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    marginTop: SPACING.sm,
+    gap: SPACING.xs,
   },
   verifiedText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text.primary,
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.success,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  },
+  mutualFriends: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
+  },
+  mutualFriendsAvatars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  mutualFriendAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.background,
+  },
+  mutualFriendsText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.secondary,
   },
   section: {
-    padding: SPACING.lg,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    marginHorizontal: '5%',
+    marginBottom: SPACING.md,
+    alignSelf: 'center',
+    maxWidth: '100%',
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sizes.lg,
+    fontWeight: TYPOGRAPHY.weights.semibold,
     color: COLORS.text.primary,
     marginBottom: SPACING.md,
   },
-  bio: {
-    fontSize: 16,
+  subsectionTitle: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.medium,
     color: COLORS.text.secondary,
+    marginBottom: SPACING.sm,
+    marginTop: -SPACING.sm,
+  },
+  bio: {
+    fontSize: TYPOGRAPHY.sizes.base,
+    color: COLORS.text.primary,
     lineHeight: 24,
   },
   infoGrid: {
-    flexDirection: 'row',
-    gap: SPACING.md,
+    gap: SPACING.sm,
   },
-  infoCard: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: COLORS.text.tertiary,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-  },
-  infoValue: {
-    fontSize: 16,
-    fontWeight: '600',
+  infoText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
     color: COLORS.text.primary,
   },
+  // Featured Song Styles
+  featuredSong: {
+    position: 'relative',
+  },
+  featuredSongImage: {
+    width: '100%',
+    height: responsiveSizes.featuredSongHeight,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  featuredSongOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featuredSongInfo: {
+    position: 'absolute',
+    bottom: SPACING.md,
+    left: SPACING.md,
+    right: SPACING.md,
+  },
+  featuredSongLabel: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.inverse,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: SPACING.xs,
+  },
+  featuredSongName: {
+    fontSize: TYPOGRAPHY.sizes.xl,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.text.inverse,
+  },
+  featuredSongArtist: {
+    fontSize: TYPOGRAPHY.sizes.base,
+    color: COLORS.text.inverse,
+    opacity: 0.9,
+    marginTop: 2,
+  },
+  waveform: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: responsiveSizes.waveformBarHeight,
+    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+  },
+  waveformBar: {
+    width: responsiveSizes.waveformBarWidth,
+    backgroundColor: COLORS.primary,
+    borderRadius: 2,
+    opacity: 0.7,
+  },
+  // Music Stats
+  spotifyHours: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: SPACING.md,
+  },
+  spotifyHoursText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    color: COLORS.text.primary,
+  },
+  genresSection: {
+    marginBottom: SPACING.md,
+  },
+  genresList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
+  genreBorderedTag: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.text.secondary,
+  },
+  genreTagText: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.text.primary,
+  },
+  // Top Artists
+  artistsList: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    width: '100%',
+  },
+  artistItem: {
+    alignItems: 'center',
+    minWidth: 80,
+    maxWidth: 100,
+    flex: 1,
+    flexBasis: '30%',
+  },
+  artistImage: {
+    width: '100%',
+    aspectRatio: 1,
+    maxWidth: responsiveSizes.artistImage.large,
+    borderRadius: responsiveSizes.artistImage.large / 2,
+    marginBottom: SPACING.xs,
+  },
+  artistName: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.primary,
+    textAlign: 'center',
+  },
+  // Top Tracks
+  trackItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
+  trackNumber: {
+    fontSize: TYPOGRAPHY.sizes.base,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.text.secondary,
+    width: responsiveSizes.icon.medium,
+  },
+  trackImage: {
+    width: responsiveSizes.artistImage.tiny,
+    height: responsiveSizes.artistImage.tiny,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  trackInfo: {
+    flex: 1,
+  },
+  trackName: {
+    fontSize: TYPOGRAPHY.sizes.base,
+    fontWeight: TYPOGRAPHY.weights.medium,
+    color: COLORS.text.primary,
+  },
+  trackArtist: {
+    fontSize: TYPOGRAPHY.sizes.sm,
+    color: COLORS.text.secondary,
+    marginTop: 2,
+  },
+  trackDuration: {
+    paddingHorizontal: SPACING.sm,
+  },
+  trackDurationText: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.tertiary,
+  },
+  // Concert History
+  concertHistoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    justifyContent: 'space-between',
+  },
+  concertHistoryCard: {
+    flex: 1,
+    minWidth: '30%',
+    maxWidth: '32%',
+    aspectRatio: 0.75,
+    borderRadius: BORDER_RADIUS.md,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  concertHistoryCardImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  concertHistoryCardOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: SPACING.xs,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  concertHistoryCardArtist: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.semibold,
+    color: COLORS.text.inverse,
+    marginBottom: 2,
+  },
+  concertHistoryCardDate: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.inverse,
+    opacity: 0.9,
+  },
+  // Credentials/Vouches
+  vouchesGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  vouchItem: {
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  vouchIcon: {
+    width: responsiveSizes.vouchIcon,
+    height: responsiveSizes.vouchIcon,
+    borderRadius: responsiveSizes.vouchIcon / 2,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vouchCount: {
+    fontSize: TYPOGRAPHY.sizes.lg,
+    fontWeight: TYPOGRAPHY.weights.bold,
+    color: COLORS.text.primary,
+  },
+  vouchLabel: {
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+  },
+  // Reviews
   reviewsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -194,24 +644,24 @@ const styles = StyleSheet.create({
   },
   reviewCard: {
     backgroundColor: COLORS.surface,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    marginBottom: SPACING.md,
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.sm,
+    marginBottom: SPACING.sm,
   },
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
   },
   reviewerName: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sizes.xs,
+    fontWeight: TYPOGRAPHY.weights.semibold,
     color: COLORS.text.primary,
   },
   reviewStars: {
     flexDirection: 'row',
-    gap: 2,
+    gap: 1,
   },
   starFilled: {
     fontSize: 14,
@@ -222,13 +672,16 @@ const styles = StyleSheet.create({
     color: COLORS.text.tertiary,
   },
   reviewComment: {
-    fontSize: 14,
-    color: COLORS.text.secondary,
-    lineHeight: 20,
-    marginBottom: SPACING.sm,
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.primary,
+    lineHeight: 16,
   },
   reviewDate: {
-    fontSize: 12,
-    color: COLORS.text.tertiary,
+    fontSize: TYPOGRAPHY.sizes.xs,
+    color: COLORS.text.secondary,
+  },
+  // Bottom spacing
+  bottomSpacing: {
+    height: SPACING.xl,
   },
 });
