@@ -22,7 +22,7 @@ export function LoginScreen() {
   const { initialize } = useABTestStore();
 
   const [participantId, setParticipantId] = useState('');
-  const [isTesterMode, setIsTesterMode] = useState(false);
+  const [isTesterMode, setIsTesterMode] = useState(true); // Default to tester mode
   const [selectedVariant, setSelectedVariant] = useState<'random' | 'A' | 'B'>('random');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -195,17 +195,17 @@ export function LoginScreen() {
           <View style={styles.modeHeader}>
             <View>
               <Text style={styles.modeLabel}>
-                {isTesterMode ? 'Tester Mode' : 'Developer Mode'}
+                Developer Mode
               </Text>
               <Text style={styles.modeDescription}>
                 {isTesterMode
-                  ? 'Clean UI for user research participants'
-                  : 'Shows variant info and debug logs'}
+                  ? 'OFF - Clean UI for user research participants'
+                  : 'ON - Shows variant info and debug logs'}
               </Text>
             </View>
             <Switch
-              value={isTesterMode}
-              onValueChange={setIsTesterMode}
+              value={!isTesterMode}
+              onValueChange={(value) => setIsTesterMode(!value)}
               trackColor={{ false: COLORS.border, true: COLORS.primary }}
               thumbColor={COLORS.background}
               disabled={isLoading}
