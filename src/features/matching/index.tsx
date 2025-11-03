@@ -1,46 +1,56 @@
 import { COLORS } from "@constants";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { fetchAllSpotifyData } from "@services/spotify/api";
-import { getValidAccessToken } from "@services/spotify/auth";
-import type { SpotifyData, User } from "@types";
-import { TEST_PROFILES } from "@utils/profileCycler";
+import { useABTestStore } from "@store";
+import type { TestProfile } from "@types";
+import { TEST_PROFILES } from "@utils/testProfiles";
 import { responsiveSizes } from "@utils/responsive";
 import { useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { ProfileCardHigh } from "../profile/ProfileCardHigh";
-// NOTE: Mid/Low profile cards archived - Sprint 3 variants, not used in production
-// import { ProfileCardLow } from "../profile/ProfileCardLow";
-// import { ProfileCardMid } from "../profile/ProfileCardMid";
+import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { ABTestProfileCard } from "../testing/ABTestProfileCard";
 import styles from "./styles";
 
-// Production: Only use high-detail view
-// type ViewMode = 'high' | 'mid' | 'low';
-
 export default function MatchScreen() {
-  // const router = useRouter(); // TODO: Use for navigation when implementing profile details
+  const router = useRouter();
+  const { variant, initialize, trackDecision, isLoading } = useABTestStore();
   const [currentIndex, setCurrentIndex] = useState(0);
-  // Production: Always use high-detail view
-  // const [viewMode, setViewMode] = useState<ViewMode>('mid');
-  const [realSpotifyData, setRealSpotifyData] = useState<SpotifyData | null>(null);
+  const [profileLoadTime, setProfileLoadTime] = useState<number>(0);
+  const [isTesterMode, setIsTesterMode] = useState(false);
 
-  // Load real Spotify data if available
+  // Initialize A/B test on mount
   useEffect(() => {
-    const loadSpotifyData = async () => {
+    const initializeABTest = async () => {
       try {
-        const token = await getValidAccessToken();
-        if (token) {
-          const data = await fetchAllSpotifyData();
-          setRealSpotifyData(data);
+        // Get participant ID from storage
+        const participantId = await AsyncStorage.getItem('@harmonize_participant_id');
+        const testerMode = await AsyncStorage.getItem('@harmonize_is_tester_mode');
+
+        // If no participant ID, redirect to login
+        if (!participantId) {
+          console.log('[Match] No participant ID found, redirecting to login');
+          router.replace('/login');
+          return;
         }
+
+        setIsTesterMode(testerMode === 'true');
+        console.log('[Match] Initializing A/B test for participant:', participantId);
+        await initialize(participantId);
+        setProfileLoadTime(Date.now());
       } catch (error) {
-        console.log('No Spotify data available:', error);
+        console.error('[Match] Error initializing A/B test:', error);
       }
     };
 
-    loadSpotifyData();
+    initializeABTest();
   }, []);
 
-  const totalProfiles = realSpotifyData ? TEST_PROFILES.length + 1 : TEST_PROFILES.length;
+  // Track load time when profile changes
+  useEffect(() => {
+    setProfileLoadTime(Date.now());
+  }, [currentIndex]);
+
+  const totalProfiles = TEST_PROFILES.length;
 
   const handleNext = () => {
     setCurrentIndex((prev) => (prev + 1) % totalProfiles);
@@ -50,55 +60,50 @@ export default function MatchScreen() {
     setCurrentIndex((prev) => (prev - 1 + totalProfiles) % totalProfiles);
   };
 
-  const handleLike = () => {
-    console.log('Liked profile:', currentIndex);
+  const handleLike = async () => {
+    const currentProfile = TEST_PROFILES[currentIndex];
+    if (currentProfile) {
+      // Track decision
+      await trackDecision(
+        currentProfile.id,
+        currentProfile.profileType,
+        profileLoadTime,
+        'like'
+      );
+      console.log('Liked profile:', currentProfile.name, '(', currentProfile.profileType, ')');
+    }
     // Move to next profile
     handleNext();
   };
 
-  const handlePass = () => {
-    console.log('Passed profile:', currentIndex);
-    // Move to previous profile
-    handlePrevious();
-  };
-
-  // Production: View mode cycling removed - only high-detail view used
-  // const cycleViewMode = () => {
-  //   const modes: ViewMode[] = ['high', 'mid', 'low'];
-  //   const currentModeIndex = modes.indexOf(viewMode);
-  //   const nextMode = modes[(currentModeIndex + 1) % modes.length];
-  //   setViewMode(nextMode);
-  // };
-
-  // Get current profile data
-  const getCurrentProfile = (): { user: User; spotify: SpotifyData } | null => {
-    if (currentIndex < TEST_PROFILES.length) {
-      return TEST_PROFILES[currentIndex];
-    } else if (realSpotifyData && currentIndex === TEST_PROFILES.length) {
-      // Create a minimal user profile for real Spotify data
-      return {
-        user: {
-          id: realSpotifyData.spotify_user_id,
-          username: realSpotifyData.spotify_username || realSpotifyData.spotify_user_id,
-          display_name: realSpotifyData.spotify_username || realSpotifyData.spotify_user_id,
-          bio: 'Connected via Spotify',
-          age: 0,
-          pronouns: '',
-          city: '',
-          university: '',
-          looking_for: 'friends',
-          profile_picture_url: '',
-          concert_preferences: [],
-          verification_level: 0,
-          created_at: new Date().toISOString(),
-        },
-        spotify: realSpotifyData,
-      };
+  const handlePass = async () => {
+    const currentProfile = TEST_PROFILES[currentIndex];
+    if (currentProfile) {
+      // Track decision
+      await trackDecision(
+        currentProfile.id,
+        currentProfile.profileType,
+        profileLoadTime,
+        'pass'
+      );
+      console.log('Passed profile:', currentProfile.name, '(', currentProfile.profileType, ')');
     }
-    return null;
+    // Move to next profile
+    handleNext();
   };
 
-  const currentProfile = getCurrentProfile();
+  // Get current test profile
+  const currentProfile: TestProfile | null = TEST_PROFILES[currentIndex] || null;
+
+  // Show loading state while A/B test initializes
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.title}>Initializing A/B Test...</Text>
+      </View>
+    );
+  }
 
   if (!currentProfile) {
     return (
@@ -108,23 +113,27 @@ export default function MatchScreen() {
     );
   }
 
-  const isSpotifyProfile = currentIndex === TEST_PROFILES.length && realSpotifyData;
-
   return (
     <View style={styles.container}>
-      {/* Header with profile counter */}
+      {/* Header with profile counter and variant indicator */}
       <View style={styles.header}>
         <View style={styles.profileCounter}>
           <Text style={styles.counterText}>
-            {isSpotifyProfile ? 'Your Spotify Profile' : `Profile ${currentIndex + 1} / ${totalProfiles}`}
+            Profile {currentIndex + 1} / {totalProfiles}
           </Text>
+          {/* Only show variant info in dev mode */}
+          {!isTesterMode && variant && (
+            <Text style={[styles.counterText, { fontSize: 12, opacity: 0.6 }]}>
+              (Variant {variant})
+            </Text>
+          )}
         </View>
       </View>
 
-      {/* Profile Card - High detail only, scrollable */}
+      {/* A/B Test Profile Card - scrollable */}
       <View style={styles.cardContainer}>
         <ScrollView style={styles.cardScrollView} showsVerticalScrollIndicator={false}>
-          <ProfileCardHigh user={currentProfile.user} spotifyData={currentProfile.spotify} />
+          <ABTestProfileCard profile={currentProfile} />
         </ScrollView>
 
         {/* Floating Action Buttons Overlay */}

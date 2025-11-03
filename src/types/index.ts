@@ -221,3 +221,6 @@ export interface RootStackParamList {
   'profile-detail': { userId: string };
   'concert-detail': { concertId: string };
 }
+
+// Export Sprint 4 A/B Testing types
+export * from './testing-types';

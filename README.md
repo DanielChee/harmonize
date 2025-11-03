@@ -1,167 +1,184 @@
-# 🎶 Harmonize – Concert Buddy Finder 🎶
+# 🎶 Harmonize – Concert Buddy Finder
 
-Harmonize is a social music app designed to help university students and young adults meet concert buddies.  
-Think of it as a mix between **Hinge** and **Spotify** – we connect you with people who share your music taste and want to attend the same concerts.  
+A React Native mobile app connecting university students as concert buddies based on shared music taste. Think **Hinge meets Spotify** for finding people to attend concerts with.
 
-Built with **Expo (React Native)**, **Supabase**, **Spotify API**, and **   API**.  
+**Built With**: Expo (React Native) • TypeScript • Supabase • Spotify API
 
+---
 
-## Prerequisites
-Make sure you have Node.js (v18 or later) installed.  
-If you don’t already have Expo, install it globally:
+## 🚀 Quick Start
 
 ```bash
-npm install -g expo-cli
+# Clone and install
+git clone https://github.com/your-team/harmonize.git
+cd harmonize
+npm install
+
+# Set up environment (see .env.example)
+cp .env.example .env
+# Add your Supabase and Spotify credentials
+
+# Start development server
+npx expo start
 ```
 
-## 🚀 Getting Started
+**Scan QR code** with Expo Go app ([iOS](https://apps.apple.com/app/expo-go/id982107779) / [Android](https://play.google.com/store/apps/details?id=host.exp.exponent)) to run on your device.
 
-1. Clone this repository:
+---
 
-   ```bash
-   git clone https://github.com/<username>/harmonize-app.git
-   cd harmonize-app
-   ```
+## 📱 Features
 
-2. Install dependencies:
+| Tab | Feature | Status |
+|-----|---------|--------|
+| **Match** | Swipe-based concert buddy discovery | ✅ Implemented |
+| **Concerts** | Browse upcoming events with filters | ✅ Mock data |
+| **Meet** | Chat with matched users | ✅ UI complete |
+| **Profile** | Spotify-powered music profiles | ✅ Fully functional |
 
-   ```bash
-   npm install
-   ```
+**Core Functionality**:
+- ✅ Spotify OAuth integration (top artists, tracks, genres)
+- ✅ 3 profile view modes (High/Mid/Low detail)
+- ✅ Profile cycling system with test data
+- ✅ Concert discovery interface
+- ✅ Chat/conversation list
+- 🚧 Peer review system (Sprint 4 - in progress)
 
-3. Start the Expo app:
-
-   ```bash
-   npx expo start
-   ```
-
-   You can now open the app and run it locally in the Expo Go App (scan the QR code)
-
-
-## 📱 App Structure (Sprint 3 - Working Prototype)
-
-- **Match Tab** – Concert buddy discovery (placeholder)
-- **Concerts Tab** – Explore upcoming concerts with mock data (filter tabs, save concerts)
-- **Meet Tab** – Conversation list with new matches and mock messages
-- **Profile Tab** – Configure your profile (Spotify integration, music stats, bio, university, 3 view modes)  
-
+---
 
 ## 🔧 Tech Stack
 
-- **Frontend**: React Native (Expo Go)  
-- **Backend/Auth/DB**: [Supabase](https://supabase.com)  
-- **APIs**:  
-  - [Spotify Web API](https://developer.spotify.com/documentation/web-api/) – top artists, songs, genres  
-  - [Songkick API](https://www.songkick.com/developer) – concert + event data  
+**Frontend**: React Native 0.76 • Expo SDK 54 • TypeScript 5.9 • Expo Router 6.0
+**Backend**: Supabase (PostgreSQL + Auth)
+**APIs**: Spotify Web API (OAuth 2.0 PKCE)
+**State**: Zustand (lightweight state management)
 
+**Architecture**: MVVM (Model-View-ViewModel) with feature-based organization
 
-## 👥 Team 3DS
+---
 
+## 🛠️ Setup Requirements
+
+### 1. Prerequisites
+- Node.js 18+ and npm
+- Expo Go app on your phone
+- Accounts: [Supabase](https://supabase.com), [Spotify Developer](https://developer.spotify.com/dashboard)
+
+### 2. Environment Variables
+
+Create `.env` file:
+
+```bash
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+EXPO_PUBLIC_SPOTIFY_CLIENT_ID=your-spotify-client-id
+EXPO_PUBLIC_SPOTIFY_REDIRECT_URI=exp://localhost:8081/--/spotify-callback
+```
+
+### 3. Database Setup
+
+Run in Supabase SQL Editor:
+
+```sql
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY,
+  username TEXT,
+  bio TEXT,
+  pronouns TEXT,
+  age INTEGER,
+  university TEXT,
+  city TEXT,
+  top_genres TEXT[],
+  top_artists TEXT[],
+  top_songs TEXT[],
+  concert_preferences TEXT[],
+  spotify_user_id TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Prototyping mode (replace with proper auth in production)
+CREATE POLICY "Enable all for prototyping" ON profiles
+FOR ALL USING (true) WITH CHECK (true);
+```
+
+### 4. Spotify App Configuration
+
+1. Create app at [Spotify Dashboard](https://developer.spotify.com/dashboard)
+2. Add redirect URI: `exp://localhost:8081/--/spotify-callback`
+3. Copy Client ID to `.env`
+
+---
+
+## 👥 Team
+
+**Team 3DS** (Georgia Tech)
 - Daniel Ayoung-Chee
 - Daniel Martin Lee
 - Sonia Lin
 - Danny Jiang
 
+---
 
-## 🔗 Supabase Setup (Prototype Mode)
+## 📚 Documentation
 
-This app uses [Supabase](https://supabase.com) as the backend for storing user profiles.
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical structure, file organization, design patterns
+- **[DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)** - Setup, workflow, common tasks, troubleshooting
+- **[TESTING_METHODOLOGY.md](TESTING_METHODOLOGY.md)** - Sprint 4 A/B testing design for peer review system
+- **[IMPLEMENTED_FEATURES.md](IMPLEMENTED_FEATURES.md)** - Complete feature list and status
 
-### Steps to Set Up
+**For Developers**: Start with DEVELOPMENT_GUIDE.md for setup and workflow details.
 
-1. Create a project on Supabase.
-   - Get the `Project URL` and `anon key` from **Project Settings → API**.
+---
 
-2. Create a `profiles` table with this SQL:
+## 🎯 Project Status
 
-   ```sql
-      drop table if exists profiles;
+**Current Sprint**: Sprint 4 (Peer Review System A/B Testing)
+**Completion**: 63% (10/16 phases complete)
 
-      create table profiles (
-      id uuid primary key,
-      username text,
-      bio text,
-      pronouns text,
-      city text,
-      top_genres text[],
-      top_artists text[],
-      created_at timestamp default now()
-      );
+**Recent Milestones**:
+- ✅ MVVM architecture with path aliases
+- ✅ Profile cards (3 view modes: High/Mid/Low)
+- ✅ Spotify OAuth + data fetching
+- ✅ Concert discovery UI
+- ✅ Chat interface
 
-      -- Open everything for prototyping
-      alter table profiles enable row level security;
+**In Progress**:
+- 🚧 A/B testing infrastructure (Amazon reviews vs Badge system)
+- 🚧 User testing data collection
+- 🚧 Profile edit form
 
-      create policy "Enable all for prototyping" on profiles
-      for all
-      using (true)
-      with check (true);
+**Known Limitations**:
+- Mock data for concerts (Songkick API integration pending)
+- No real-time messaging (Supabase realtime planned)
+- UUID-based auth (proper Supabase Auth in production)
+- No matching algorithm (swipe-based matching placeholder)
 
-   ```
+---
 
-3. Add environment variables in `.env`:
+## 🧪 Testing & Development
 
-   ```bash
-   EXPO_PUBLIC_SUPABASE_URL=https://rdmttxhlfbbcpbwejvfy.supabase.co
-   EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkbXR0eGhsZmJiY3Bid2VqdmZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1MDI1MDAsImV4cCI6MjA3NTA3ODUwMH0.vABv8fkw60Gq1hnLQVxybmX-aOQcgI09Vj2xb6-WQl8
+```bash
+# Run type checking
+npx tsc --noEmit
 
-   ```
+# Run linter
+npm run lint
 
-4. Install dependencies:
+# Clear cache and restart
+npx expo start -c
 
-   ```bash
-   npm install @supabase/supabase-js
-   npx expo install @react-native-async-storage/async-storage
-   npm install react-native-get-random-values uuid
-   ```
+# Test routes
+# Navigate to /test-components for UI component testing
+# Navigate to /test-supabase for Spotify/database testing
+```
 
-5. On first run, the app auto-generates a user UUID and stores it in AsyncStorage.  
-   - That UUID is also inserted into Supabase as a `profiles` row.  
-   - This allows multiple users across devices **without login**.
+---
 
-If you need a supabase password ask dayoungchee3@gatech.edu
+## 📄 License
 
-## 🎵 Spotify Integration
+This project is part of an academic course at Georgia Tech.
 
-Harmonize integrates with Spotify to display your music preferences and top artists.
+---
 
-### Setup Steps
-
-1. Register your app at [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
-2. Add your redirect URI: `exp://localhost:8081/--/spotify-callback`
-3. Add your Spotify Client ID to `.env`:
-
-   ```bash
-   EXPO_PUBLIC_SPOTIFY_CLIENT_ID=your_client_id_here
-   EXPO_PUBLIC_SPOTIFY_REDIRECT_URI=exp://localhost:8081/--/spotify-callback
-   ```
-
-4. The app uses OAuth PKCE flow for secure authentication
-5. After connecting Spotify, your top artists, tracks, and genres will be displayed in your profile
-
-## 📊 Current Sprint 3 Progress (63% Complete)
-
-✅ **Completed (10/16 Phases)**
-- MVVM architecture with path aliases
-- Profile cards (High/Mid/Low detail views)
-- Spotify OAuth integration + data fetching
-- Concert screen with mock data
-- Meet screen with conversation list
-- Mock data utilities
-
-⏳ **In Progress (6/16 Phases)**
-- User state management (Zustand)
-- Profile edit form
-- View mode toggler
-- User testing infrastructure
-- Meet conversation screen
-
-## 🚧 Known Issues & Limitations
-
-- Concert images use placeholder URLs (not connected to Songkick API yet)
-- Meet messages are mock data only (no real-time messaging)
-- No user authentication (UUID-based for prototyping)
-- Matching algorithm not yet implemented
-
-## 📝 Development Notes
-
-For development guides and implementation details, refer to the project documentation.
+**Questions?** Check [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md) or open an issue.
