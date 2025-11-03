@@ -96,9 +96,9 @@ const POSITIVE_REVIEWS_A: ReviewTypeA[] = [
 ];
 
 const POSITIVE_BADGES_B: BadgeDisplay = {
-  q1Badge: { emoji: '🏆', name: 'Platinum', score: 4.7 },
-  q2Badge: { emoji: '🎉', name: 'Crowd Favorite', score: 4.6 },
-  q3Badge: { emoji: '🪨', name: 'Rock Solid', score: 4.8 },
+  q1Badge: { emoji: '🏆', name: 'Platinum Tier' },
+  q2Badge: { emoji: '🎉', name: 'Gold Tier' },
+  q3Badge: { emoji: '🪨', name: 'Diamond Tier' },
   harmonies: { count: 7, total: 8 },
 };
 
@@ -191,9 +191,9 @@ const NEGATIVE_REVIEWS_A: ReviewTypeA[] = [
 ];
 
 const NEGATIVE_BADGES_B: BadgeDisplay = {
-  q1Badge: null, // No badge for < 3.0 average
-  q2Badge: { emoji: '🎧', name: 'Chill Listener', score: 2.3 },
-  q3Badge: { emoji: '🎵', name: 'Getting in Sync', score: 1.8 },
+  q1Badge: null, // Not earned - too few quality reviews
+  q2Badge: { emoji: '🎧', name: 'Bronze Tier' },
+  q3Badge: { emoji: '🎵', name: 'Bronze Tier' },
   harmonies: { count: 0, total: 6 },
 };
 

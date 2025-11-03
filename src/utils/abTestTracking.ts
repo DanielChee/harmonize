@@ -48,7 +48,7 @@ export async function getUserAssignment(): Promise<UserVariantAssignment | null>
 }
 
 /**
- * Assign user to variant (A or B) - 50/50 random split
+ * Assign user to variant (A or B) - 50/50 random split or forced
  * Syncs to both AsyncStorage and Supabase
  */
 export async function assignVariant(userId: string): Promise<TestVariant> {
@@ -65,8 +65,23 @@ export async function assignVariant(userId: string): Promise<TestVariant> {
     }
   }
 
-  // Create new assignment
-  const variant: TestVariant = Math.random() < 0.5 ? 'A' : 'B';
+  // Check if variant is forced from login screen
+  let variant: TestVariant;
+  try {
+    const forceVariant = await AsyncStorage.getItem('@harmonize_force_variant');
+    if (forceVariant === 'A' || forceVariant === 'B') {
+      variant = forceVariant;
+      console.log(`[A/B Test] Forcing Variant ${variant} (from login)`);
+    } else {
+      // Random assignment
+      variant = Math.random() < 0.5 ? 'A' : 'B';
+      console.log(`[A/B Test] Random assignment to Variant ${variant}`);
+    }
+  } catch (error) {
+    // Fallback to random if error
+    variant = Math.random() < 0.5 ? 'A' : 'B';
+  }
+
   const assignment: UserVariantAssignment = {
     userId,
     assignedVariant: variant,

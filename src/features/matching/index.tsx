@@ -16,7 +16,7 @@ export default function MatchScreen() {
   const { variant, initialize, trackDecision, isLoading } = useABTestStore();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [profileLoadTime, setProfileLoadTime] = useState<number>(0);
-  const [isTesterMode, setIsTesterMode] = useState(false);
+  const [isTesterMode, setIsTesterMode] = useState(true); // Default to tester mode (clean UI)
 
   // Initialize A/B test on mount
   useEffect(() => {
@@ -35,6 +35,7 @@ export default function MatchScreen() {
 
         setIsTesterMode(testerMode === 'true');
         console.log('[Match] Initializing A/B test for participant:', participantId);
+        console.log('[Match] Mode:', testerMode === 'true' ? 'TESTER' : 'DEV');
         await initialize(participantId);
         setProfileLoadTime(Date.now());
       } catch (error) {
@@ -160,16 +161,16 @@ export default function MatchScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with profile counter, variant indicator, and logout */}
+      {/* Header with profile counter and logout */}
       <View style={styles.header}>
         <View style={styles.profileCounter}>
           <Text style={styles.counterText}>
             Profile {currentIndex + 1} / {totalProfiles}
           </Text>
-          {/* Only show variant info in dev mode */}
+          {/* Show variant info ONLY in developer mode */}
           {!isTesterMode && variant && (
-            <Text style={[styles.counterText, { fontSize: 12, opacity: 0.6 }]}>
-              (Variant {variant})
+            <Text style={[styles.counterText, { fontSize: 12, opacity: 0.6, marginTop: 4 }]}>
+              Variant {variant}
             </Text>
           )}
         </View>

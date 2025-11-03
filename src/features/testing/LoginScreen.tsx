@@ -13,6 +13,7 @@ import { useABTestStore } from '@store';
 const STORAGE_KEYS = {
   PARTICIPANT_ID: '@harmonize_participant_id',
   IS_TESTER_MODE: '@harmonize_is_tester_mode',
+  FORCE_VARIANT: '@harmonize_force_variant', // Force a specific variant for testing
   HAS_LOGGED_IN: '@harmonize_has_logged_in',
 };
 
@@ -22,6 +23,7 @@ export function LoginScreen() {
 
   const [participantId, setParticipantId] = useState('');
   const [isTesterMode, setIsTesterMode] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<'random' | 'A' | 'B'>('random');
   const [isLoading, setIsLoading] = useState(false);
 
   // Check if user is already logged in
@@ -69,10 +71,12 @@ export function LoginScreen() {
       // Store participant info
       await AsyncStorage.setItem(STORAGE_KEYS.PARTICIPANT_ID, cleanId);
       await AsyncStorage.setItem(STORAGE_KEYS.IS_TESTER_MODE, isTesterMode.toString());
+      await AsyncStorage.setItem(STORAGE_KEYS.FORCE_VARIANT, selectedVariant);
       await AsyncStorage.setItem(STORAGE_KEYS.HAS_LOGGED_IN, 'true');
 
       console.log('[Login] Participant logged in:', cleanId);
       console.log('[Login] Mode:', isTesterMode ? 'TESTER' : 'DEV');
+      console.log('[Login] Variant Selection:', selectedVariant);
 
       // Initialize A/B test with participant ID
       await initialize(cleanId);
@@ -101,6 +105,7 @@ export function LoginScreen() {
               await AsyncStorage.multiRemove([
                 STORAGE_KEYS.PARTICIPANT_ID,
                 STORAGE_KEYS.IS_TESTER_MODE,
+                STORAGE_KEYS.FORCE_VARIANT,
                 STORAGE_KEYS.HAS_LOGGED_IN,
                 '@harmonize_ab_test_assignment',
                 '@harmonize_ab_test_interactions',
@@ -141,6 +146,47 @@ export function LoginScreen() {
           />
           <Text style={styles.hint}>
             Enter your assigned participant ID (3-20 characters)
+          </Text>
+        </View>
+
+        {/* Variant Selection */}
+        <View style={styles.modeSection}>
+          <Text style={styles.modeLabel}>A/B Test Variant</Text>
+          <View style={styles.variantButtons}>
+            <TouchableOpacity
+              style={[styles.variantButton, selectedVariant === 'random' && styles.variantButtonActive]}
+              onPress={() => setSelectedVariant('random')}
+              disabled={isLoading}
+            >
+              <Text style={[styles.variantButtonText, selectedVariant === 'random' && styles.variantButtonTextActive]}>
+                Random
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.variantButton, selectedVariant === 'A' && styles.variantButtonActive]}
+              onPress={() => setSelectedVariant('A')}
+              disabled={isLoading}
+            >
+              <Text style={[styles.variantButtonText, selectedVariant === 'A' && styles.variantButtonTextActive]}>
+                Variant A
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.variantButton, selectedVariant === 'B' && styles.variantButtonActive]}
+              onPress={() => setSelectedVariant('B')}
+              disabled={isLoading}
+            >
+              <Text style={[styles.variantButtonText, selectedVariant === 'B' && styles.variantButtonTextActive]}>
+                Variant B
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.modeDescription}>
+            {selectedVariant === 'random'
+              ? '50/50 random assignment'
+              : selectedVariant === 'A'
+              ? 'Amazon-style reviews (stars + text)'
+              : 'Badge system (visual badges)'}
           </Text>
         </View>
 
@@ -272,6 +318,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.text.secondary,
     maxWidth: '80%',
+    marginTop: SPACING.xs,
+  },
+  variantButtons: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginVertical: SPACING.sm,
+  },
+  variantButton: {
+    flex: 1,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+  },
+  variantButtonActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '20',
+  },
+  variantButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text.secondary,
+  },
+  variantButtonTextActive: {
+    color: COLORS.primary,
   },
   loginButton: {
     backgroundColor: COLORS.primary,

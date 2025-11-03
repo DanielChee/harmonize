@@ -384,9 +384,9 @@ INSERT INTO ab_test_profiles (
     {"type": "A", "stars": 4, "comment": "Had a blast at the festival together!", "reviewerName": "Riley B.", "daysAgo": 35}
   ]'::jsonb,
   '{
-    "q1Badge": {"emoji": "🏆", "name": "Platinum", "score": 4.7},
-    "q2Badge": {"emoji": "🎉", "name": "Crowd Favorite", "score": 4.6},
-    "q3Badge": {"emoji": "🪨", "name": "Rock Solid", "score": 4.8},
+    "q1Badge": {"emoji": "🏆", "name": "Platinum Tier"},
+    "q2Badge": {"emoji": "🎉", "name": "Gold Tier"},
+    "q3Badge": {"emoji": "🪨", "name": "Diamond Tier"},
     "harmonies": {"count": 7, "total": 8}
   }'::jsonb
 ) ON CONFLICT (profile_id) DO NOTHING;
@@ -454,8 +454,8 @@ INSERT INTO ab_test_profiles (
   ]'::jsonb,
   '{
     "q1Badge": null,
-    "q2Badge": {"emoji": "🎧", "name": "Chill Listener", "score": 2.3},
-    "q3Badge": {"emoji": "🎵", "name": "Getting in Sync", "score": 1.8},
+    "q2Badge": {"emoji": "🎧", "name": "Bronze Tier"},
+    "q3Badge": {"emoji": "🎵", "name": "Bronze Tier"},
     "harmonies": {"count": 0, "total": 6}
   }'::jsonb
 ) ON CONFLICT (profile_id) DO NOTHING;

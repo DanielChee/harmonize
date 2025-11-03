@@ -62,37 +62,57 @@ export function ProfileCardB({ profile }: ProfileCardBProps) {
 
         <View style={styles.badgesContainer}>
           {/* Q1 Badge - Event Quality */}
-          {badgesTypeB.q1Badge && (
-            <View style={styles.badgeCard}>
+          {badgesTypeB.q1Badge ? (
+            <View style={[styles.badgeCard, styles.badgeCardEarned]}>
               <Text style={styles.badgeEmoji}>{badgesTypeB.q1Badge.emoji}</Text>
               <Text style={styles.badgeName}>{badgesTypeB.q1Badge.name}</Text>
-              <Text style={styles.badgeScore}>{badgesTypeB.q1Badge.score.toFixed(1)}/5.0</Text>
+              <Text style={styles.badgeCategory}>Event Quality</Text>
+            </View>
+          ) : (
+            <View style={[styles.badgeCard, styles.badgeCardLocked]}>
+              <Text style={styles.badgeEmojiLocked}>🔒</Text>
+              <Text style={styles.badgeNameLocked}>Not Yet Earned</Text>
               <Text style={styles.badgeCategory}>Event Quality</Text>
             </View>
           )}
 
           {/* Q2 Badge - Social Compatibility */}
-          <View style={styles.badgeCard}>
-            <Text style={styles.badgeEmoji}>{badgesTypeB.q2Badge.emoji}</Text>
-            <Text style={styles.badgeName}>{badgesTypeB.q2Badge.name}</Text>
-            <Text style={styles.badgeScore}>{badgesTypeB.q2Badge.score.toFixed(1)}/5.0</Text>
-            <Text style={styles.badgeCategory}>Social Vibe</Text>
-          </View>
+          {badgesTypeB.q2Badge ? (
+            <View style={[styles.badgeCard, styles.badgeCardEarned]}>
+              <Text style={styles.badgeEmoji}>{badgesTypeB.q2Badge.emoji}</Text>
+              <Text style={styles.badgeName}>{badgesTypeB.q2Badge.name}</Text>
+              <Text style={styles.badgeCategory}>Social Vibe</Text>
+            </View>
+          ) : (
+            <View style={[styles.badgeCard, styles.badgeCardLocked]}>
+              <Text style={styles.badgeEmojiLocked}>🔒</Text>
+              <Text style={styles.badgeNameLocked}>Not Yet Earned</Text>
+              <Text style={styles.badgeCategory}>Social Vibe</Text>
+            </View>
+          )}
 
           {/* Q3 Badge - Reliability */}
-          <View style={styles.badgeCard}>
-            <Text style={styles.badgeEmoji}>{badgesTypeB.q3Badge.emoji}</Text>
-            <Text style={styles.badgeName}>{badgesTypeB.q3Badge.name}</Text>
-            <Text style={styles.badgeScore}>{badgesTypeB.q3Badge.score.toFixed(1)}/5.0</Text>
-            <Text style={styles.badgeCategory}>Reliability</Text>
-          </View>
+          {badgesTypeB.q3Badge ? (
+            <View style={[styles.badgeCard, styles.badgeCardEarned]}>
+              <Text style={styles.badgeEmoji}>{badgesTypeB.q3Badge.emoji}</Text>
+              <Text style={styles.badgeName}>{badgesTypeB.q3Badge.name}</Text>
+              <Text style={styles.badgeCategory}>Reliability</Text>
+            </View>
+          ) : (
+            <View style={[styles.badgeCard, styles.badgeCardLocked]}>
+              <Text style={styles.badgeEmojiLocked}>🔒</Text>
+              <Text style={styles.badgeNameLocked}>Not Yet Earned</Text>
+              <Text style={styles.badgeCategory}>Reliability</Text>
+            </View>
+          )}
 
           {/* Harmonies Counter */}
-          <View style={styles.badgeCard}>
-            <Text style={styles.badgeEmoji}>🤝</Text>
-            <Text style={styles.badgeName}>{badgesTypeB.harmonies.count} Harmonies</Text>
-            <Text style={styles.badgeScore}>
-              {badgesTypeB.harmonies.count}/{badgesTypeB.harmonies.total}
+          <View style={[styles.badgeCard, badgesTypeB.harmonies.count > 0 ? styles.badgeCardEarned : styles.badgeCardLocked]}>
+            <Text style={badgesTypeB.harmonies.count > 0 ? styles.badgeEmoji : styles.badgeEmojiLocked}>
+              {badgesTypeB.harmonies.count > 0 ? '🤝' : '🔒'}
+            </Text>
+            <Text style={badgesTypeB.harmonies.count > 0 ? styles.badgeName : styles.badgeNameLocked}>
+              {badgesTypeB.harmonies.count > 0 ? `${badgesTypeB.harmonies.count} Harmonies` : 'No Harmonies Yet'}
             </Text>
             <Text style={styles.badgeCategory}>Would Meet Again</Text>
           </View>
@@ -206,28 +226,45 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: COLORS.primary + '30',
+    borderColor: COLORS.border,
+  },
+  badgeCardEarned: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '10',
+  },
+  badgeCardLocked: {
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    opacity: 0.6,
   },
   badgeEmoji: {
-    fontSize: 40,
+    fontSize: 48,
     marginBottom: SPACING.sm,
   },
+  badgeEmojiLocked: {
+    fontSize: 36,
+    marginBottom: SPACING.sm,
+    opacity: 0.4,
+  },
   badgeName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
-    color: COLORS.text.primary,
+    color: COLORS.primary,
     textAlign: 'center',
     marginBottom: SPACING.xs,
   },
-  badgeScore: {
-    fontSize: 14,
+  badgeNameLocked: {
+    fontSize: 13,
     fontWeight: '600',
-    color: COLORS.primary,
+    color: COLORS.text.tertiary,
+    textAlign: 'center',
     marginBottom: SPACING.xs,
   },
   badgeCategory: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.text.tertiary,
     textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

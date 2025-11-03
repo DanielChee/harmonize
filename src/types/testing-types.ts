@@ -29,12 +29,12 @@ export interface ReviewTypeA {
   daysAgo: number;
 }
 
-// Badge tiers for Type B (displayed as visual badges)
+// Badge tiers for Type B (displayed as visual tier-based badges like Khan Academy/Duolingo)
 export interface BadgeDisplay {
-  q1Badge: { emoji: string; name: string; score: number } | null; // Event quality
-  q2Badge: { emoji: string; name: string; score: number }; // Social
-  q3Badge: { emoji: string; name: string; score: number }; // Reliability
-  harmonies: { count: number; total: number }; // Harmony counter
+  q1Badge: { emoji: string; name: string } | null; // Event quality (Platinum/Gold/Bronze or null)
+  q2Badge: { emoji: string; name: string } | null; // Social (Platinum/Gold/Bronze or null)
+  q3Badge: { emoji: string; name: string } | null; // Reliability (Platinum/Gold/Bronze or null)
+  harmonies: { count: number; total: number }; // Harmony counter (number of harmonies earned)
 }
 
 // Complete test profile
