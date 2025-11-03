@@ -13,4 +13,5 @@ export * from './profileCycler';
 export { TEST_PROFILES } from './testProfiles';
 export * from './testProfiles';
 export * from './abTestTracking';
-export * from './supabaseSync';
+// Supabase sync temporarily disabled until configured
+// export * from './supabaseSync';

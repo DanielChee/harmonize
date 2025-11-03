@@ -12,14 +12,15 @@ import type {
   TestProfile,
 } from '@types';
 import { isDecisionCorrect } from './testProfiles';
-import {
-  syncAssignment,
-  syncInteraction,
-  getAssignmentFromSupabase,
-} from './supabaseSync';
+// Supabase sync temporarily disabled until client is configured
+// import {
+//   syncAssignment,
+//   syncInteraction,
+//   getAssignmentFromSupabase,
+// } from './supabaseSync';
 
 const STORAGE_KEY = '@harmonize_ab_test';
-const ENABLE_SUPABASE_SYNC = true; // Toggle for testing
+const ENABLE_SUPABASE_SYNC = false; // Disabled until Supabase is configured
 
 /**
  * Get or create user's variant assignment
@@ -53,17 +54,18 @@ export async function getUserAssignment(): Promise<UserVariantAssignment | null>
  */
 export async function assignVariant(userId: string): Promise<TestVariant> {
   // Check if user already has assignment in Supabase
-  if (ENABLE_SUPABASE_SYNC) {
-    const supabaseAssignment = await getAssignmentFromSupabase(userId);
-    if (supabaseAssignment) {
-      console.log(
-        `[A/B Test] User found in Supabase with Variant ${supabaseAssignment.assignedVariant}`
-      );
-      // Store locally
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(supabaseAssignment));
-      return supabaseAssignment.assignedVariant;
-    }
-  }
+  // Temporarily disabled until Supabase is configured
+  // if (ENABLE_SUPABASE_SYNC) {
+  //   const supabaseAssignment = await getAssignmentFromSupabase(userId);
+  //   if (supabaseAssignment) {
+  //     console.log(
+  //       `[A/B Test] User found in Supabase with Variant ${supabaseAssignment.assignedVariant}`
+  //     );
+  //     // Store locally
+  //     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(supabaseAssignment));
+  //     return supabaseAssignment.assignedVariant;
+  //   }
+  // }
 
   // Check if variant is forced from login screen
   let variant: TestVariant;
@@ -95,10 +97,10 @@ export async function assignVariant(userId: string): Promise<TestVariant> {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(assignment));
     console.log(`[A/B Test] User assigned to Variant ${variant}`);
 
-    // Sync to Supabase
-    if (ENABLE_SUPABASE_SYNC) {
-      await syncAssignment(assignment);
-    }
+    // Sync to Supabase - temporarily disabled
+    // if (ENABLE_SUPABASE_SYNC) {
+    //   await syncAssignment(assignment);
+    // }
   } catch (error) {
     console.error('Error assigning variant:', error);
   }
@@ -175,10 +177,10 @@ export async function trackProfileDecision(
       variant: variantShown,
     });
 
-    // Sync to Supabase
-    if (ENABLE_SUPABASE_SYNC) {
-      await syncInteraction(assignment.userId, metrics);
-    }
+    // Sync to Supabase - temporarily disabled
+    // if (ENABLE_SUPABASE_SYNC) {
+    //   await syncInteraction(assignment.userId, metrics);
+    // }
   } catch (error) {
     console.error('Error tracking decision:', error);
   }

@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { TestVariant, UserVariantAssignment } from '@types';
 import {
   getUserAssignment,
@@ -51,10 +52,24 @@ export const useABTestStore = create<ABTestStore>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
-      // Get existing assignment or create new one
+      // Check if variant is being forced from login screen
+      const forceVariant = await AsyncStorage.getItem('@harmonize_force_variant');
+      const shouldForceVariant = forceVariant === 'A' || forceVariant === 'B';
+
+      // Get existing assignment
       let assignment = await getUserAssignment();
 
-      if (!assignment) {
+      // If forcing a variant, check if we need to reassign
+      if (shouldForceVariant && assignment) {
+        if (assignment.assignedVariant !== forceVariant) {
+          console.log(`[A/B Test] Force variant mismatch. Reassigning from ${assignment.assignedVariant} to ${forceVariant}...`);
+          const newVariant = await assignVariant(userId);
+          assignment = await getUserAssignment();
+        } else {
+          console.log(`[A/B Test] Using existing assignment with forced variant ${forceVariant}`);
+        }
+      } else if (!assignment) {
+        // No existing assignment, create new one
         console.log('[A/B Test] No assignment found, creating new one...');
         const newVariant = await assignVariant(userId);
         assignment = await getUserAssignment();
