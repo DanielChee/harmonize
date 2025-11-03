@@ -11,12 +11,8 @@ export async function getOrCreateUser() {
     userId = uuidv4();
     await AsyncStorage.setItem("userId", userId);
 
-    // Insert placeholder profile in Supabase
-    await supabase.from("profiles").insert({
-      id: userId,
-      username: "Demo User",
-      bio: "Concert lover 🎶",
-    });
+    // Note: Profile will be created when user completes Spotify OAuth or profile setup
+    // No automatic placeholder profile created
   }
 
   return userId;

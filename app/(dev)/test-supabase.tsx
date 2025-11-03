@@ -36,37 +36,16 @@ export default function TestSupabase() {
 
   const testSupabase = async () => {
     try {
-      // generate a random user id
-      const userId = uuidv4();
-
-      // insert a test row
-      const { error: insertError } = await supabase
-        .from("profiles")
-        .insert({
-          id: userId,
-          username: "test_user",
-          bio: "Hello from Expo!",
-          pronouns: "they/them",
-          city: "Atlanta",
-          top_genres: ["indie", "pop"],
-          top_artists: ["Phoebe Bridgers", "Taylor Swift"],
-        });
-
-      if (insertError) {
-        setSupabaseMessage("Insert error: " + insertError.message);
-        return;
-      }
-
-      // query the row back
+      // Test Supabase connection without creating test users
+      // Just query to check if the connection works
       const { data, error: fetchError } = await supabase
         .from("profiles")
-        .select("*")
-        .eq("id", userId);
+        .select("count");
 
       if (fetchError) {
-        setSupabaseMessage("Fetch error: " + fetchError.message);
+        setSupabaseMessage("Connection error: " + fetchError.message);
       } else {
-        setSupabaseMessage("✅ Supabase working! User created: " + data?.[0]?.username);
+        setSupabaseMessage("✅ Supabase connected successfully!");
       }
     } catch (err) {
       setSupabaseMessage("Unexpected error: " + err);
