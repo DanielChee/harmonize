@@ -43,6 +43,9 @@ export default StyleSheet.create({
     color: COLORS.text.secondary,
     fontWeight: TYPOGRAPHY.weights.medium as any,
   },
+  logoutButton: {
+    padding: SPACING.sm,
+  },
   cardContainer: {
     flex: 1,
     paddingHorizontal: 0, // Remove any padding that might cause width issues
@@ -63,7 +66,8 @@ export default StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    alignItems: 'center',
     paddingHorizontal: SPACING.xl, // Padding from screen edges
     pointerEvents: 'box-none', // Allow touches to pass through container to buttons
   },
@@ -110,6 +114,13 @@ export default StyleSheet.create({
   likeButton: {
     borderWidth: 2,
     borderColor: COLORS.success,
+  },
+  blockButton: {
+    width: responsiveSizes.actionButton.width * 0.8,
+    height: responsiveSizes.actionButton.height * 0.8,
+    backgroundColor: COLORS.error,
+    borderWidth: 2,
+    borderColor: COLORS.error,
   },
   title: {
     ...TYPOGRAPHY.scale.h2,

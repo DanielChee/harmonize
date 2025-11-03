@@ -5,7 +5,7 @@ import type { TestProfile } from "@types";
 import { TEST_PROFILES } from "@utils/testProfiles";
 import { responsiveSizes } from "@utils/responsive";
 import { useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator, Alert } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { ABTestProfileCard } from "../testing/ABTestProfileCard";
@@ -92,6 +92,51 @@ export default function MatchScreen() {
     handleNext();
   };
 
+  const handleBlock = async () => {
+    const currentProfile = TEST_PROFILES[currentIndex];
+    if (currentProfile) {
+      // Track decision
+      await trackDecision(
+        currentProfile.id,
+        currentProfile.profileType,
+        profileLoadTime,
+        'block'
+      );
+      console.log('Blocked profile:', currentProfile.name, '(', currentProfile.profileType, ')');
+    }
+    // Move to next profile
+    handleNext();
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout? Your test data will be preserved.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Only clear login status, preserve test data
+              await AsyncStorage.multiRemove([
+                '@harmonize_participant_id',
+                '@harmonize_is_tester_mode',
+                '@harmonize_has_logged_in',
+              ]);
+              console.log('[Match] User logged out');
+              router.replace('/login');
+            } catch (error) {
+              console.error('[Match] Error logging out:', error);
+              Alert.alert('Error', 'Failed to logout');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Get current test profile
   const currentProfile: TestProfile | null = TEST_PROFILES[currentIndex] || null;
 
@@ -115,7 +160,7 @@ export default function MatchScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with profile counter and variant indicator */}
+      {/* Header with profile counter, variant indicator, and logout */}
       <View style={styles.header}>
         <View style={styles.profileCounter}>
           <Text style={styles.counterText}>
@@ -128,6 +173,9 @@ export default function MatchScreen() {
             </Text>
           )}
         </View>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <MaterialCommunityIcons name="logout" size={24} color={COLORS.error} />
+        </TouchableOpacity>
       </View>
 
       {/* A/B Test Profile Card - scrollable */}
@@ -138,13 +186,22 @@ export default function MatchScreen() {
 
         {/* Floating Action Buttons Overlay */}
         <View style={styles.floatingButtonsContainer}>
-          {/* Dislike Button - Bottom Left */}
+          {/* Pass Button - Bottom Left */}
           <TouchableOpacity
             style={[styles.floatingActionButton, styles.passButton]}
             onPress={handlePass}
             activeOpacity={0.7}
           >
             <MaterialCommunityIcons name="close" size={responsiveSizes.icon.xlarge} color={COLORS.error} />
+          </TouchableOpacity>
+
+          {/* Block Button - Bottom Center */}
+          <TouchableOpacity
+            style={[styles.floatingActionButton, styles.blockButton]}
+            onPress={handleBlock}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="cancel" size={responsiveSizes.icon.large} color={COLORS.text.inverse} />
           </TouchableOpacity>
 
           {/* Like Button - Bottom Right */}

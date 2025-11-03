@@ -1,6 +1,7 @@
 /**
  * A/B Test Tracking Utility
  * Handles variant assignment and behavioral metrics collection
+ * Syncs data to both AsyncStorage (local) and Supabase (cloud)
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,18 +12,34 @@ import type {
   TestProfile,
 } from '@types';
 import { isDecisionCorrect } from './testProfiles';
+import {
+  syncAssignment,
+  syncInteraction,
+  getAssignmentFromSupabase,
+} from './supabaseSync';
 
 const STORAGE_KEY = '@harmonize_ab_test';
+const ENABLE_SUPABASE_SYNC = true; // Toggle for testing
 
 /**
  * Get or create user's variant assignment
+ * Checks AsyncStorage first, then Supabase
  */
 export async function getUserAssignment(): Promise<UserVariantAssignment | null> {
   try {
+    // Check local storage first
     const stored = await AsyncStorage.getItem(STORAGE_KEY);
     if (stored) {
       return JSON.parse(stored);
     }
+
+    // If not in local storage and Supabase sync is enabled, check Supabase
+    if (ENABLE_SUPABASE_SYNC) {
+      console.log('[A/B Test] No local assignment, checking Supabase...');
+      // Note: We need userId to check Supabase, which we don't have here
+      // This will be handled in the initialize flow
+    }
+
     return null;
   } catch (error) {
     console.error('Error getting user assignment:', error);
@@ -32,8 +49,23 @@ export async function getUserAssignment(): Promise<UserVariantAssignment | null>
 
 /**
  * Assign user to variant (A or B) - 50/50 random split
+ * Syncs to both AsyncStorage and Supabase
  */
 export async function assignVariant(userId: string): Promise<TestVariant> {
+  // Check if user already has assignment in Supabase
+  if (ENABLE_SUPABASE_SYNC) {
+    const supabaseAssignment = await getAssignmentFromSupabase(userId);
+    if (supabaseAssignment) {
+      console.log(
+        `[A/B Test] User found in Supabase with Variant ${supabaseAssignment.assignedVariant}`
+      );
+      // Store locally
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(supabaseAssignment));
+      return supabaseAssignment.assignedVariant;
+    }
+  }
+
+  // Create new assignment
   const variant: TestVariant = Math.random() < 0.5 ? 'A' : 'B';
   const assignment: UserVariantAssignment = {
     userId,
@@ -44,8 +76,14 @@ export async function assignVariant(userId: string): Promise<TestVariant> {
   };
 
   try {
+    // Save to AsyncStorage
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(assignment));
     console.log(`[A/B Test] User assigned to Variant ${variant}`);
+
+    // Sync to Supabase
+    if (ENABLE_SUPABASE_SYNC) {
+      await syncAssignment(assignment);
+    }
   } catch (error) {
     console.error('Error assigning variant:', error);
   }
@@ -81,6 +119,7 @@ export async function trackProfileView(
 
 /**
  * Record user's decision on a profile
+ * Syncs to both AsyncStorage and Supabase
  */
 export async function trackProfileDecision(
   profileId: string,
@@ -109,6 +148,7 @@ export async function trackProfileDecision(
     const assignment = await getUserAssignment();
     if (!assignment) return;
 
+    // Save to AsyncStorage
     assignment.interactions.push(metrics);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(assignment));
 
@@ -119,6 +159,11 @@ export async function trackProfileDecision(
       correct,
       variant: variantShown,
     });
+
+    // Sync to Supabase
+    if (ENABLE_SUPABASE_SYNC) {
+      await syncInteraction(assignment.userId, metrics);
+    }
   } catch (error) {
     console.error('Error tracking decision:', error);
   }

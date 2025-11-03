@@ -13,3 +13,4 @@ export * from './profileCycler';
 export { TEST_PROFILES } from './testProfiles';
 export * from './testProfiles';
 export * from './abTestTracking';
+export * from './supabaseSync';

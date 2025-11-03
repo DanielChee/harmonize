@@ -2,7 +2,11 @@
  * Sprint 4 A/B Testing - Test Profile Data
  *
  * Controlled experiment: ALL profiles share identical base attributes.
- * ONLY difference is review quality (positive/neutral/negative).
+ * ONLY difference is review quality:
+ *
+ * 1. POSITIVE: Obviously good reviews (8 reviews, 4.6★ average)
+ * 2. NEUTRAL: New user with NO reviews (0 reviews)
+ * 3. NEGATIVE: Obviously bad reviews (6 reviews, 1.5★ average)
  */
 
 import type {
@@ -28,8 +32,9 @@ export const BASE_PROFILE: BaseProfile = {
 };
 
 // ============================================
-// POSITIVE PROFILE (High Trust)
+// POSITIVE PROFILE (Obviously Good Reviews)
 // ============================================
+// 8 reviews with 4-5 stars, clearly trustworthy
 
 const POSITIVE_REVIEWS_A: ReviewTypeA[] = [
   {
@@ -110,31 +115,17 @@ export const POSITIVE_PROFILE: TestProfile = {
 };
 
 // ============================================
-// NEUTRAL PROFILE (Moderate Trust)
+// NEUTRAL PROFILE (New User - NO REVIEWS)
 // ============================================
+// This profile has NO reviews to test how users evaluate new users
 
-const NEUTRAL_REVIEWS_A: ReviewTypeA[] = [
-  {
-    type: 'A',
-    stars: 4,
-    comment: 'First concert together, everything went smoothly.',
-    reviewerName: 'Jordan K.',
-    daysAgo: 8,
-  },
-  {
-    type: 'A',
-    stars: 3,
-    comment: 'Nice person, kind of quiet. Fine experience overall.',
-    reviewerName: 'Casey M.',
-    daysAgo: 14,
-  },
-];
+const NEUTRAL_REVIEWS_A: ReviewTypeA[] = []; // No reviews!
 
 const NEUTRAL_BADGES_B: BadgeDisplay = {
-  q1Badge: { emoji: '🥇', name: 'Gold', score: 3.5 },
-  q2Badge: { emoji: '✨', name: 'Good Vibes', score: 3.5 },
-  q3Badge: { emoji: '✅', name: 'Dependable', score: 3.5 },
-  harmonies: { count: 1, total: 2 },
+  q1Badge: null, // No badge - not enough reviews
+  q2Badge: null, // No badge - not enough reviews
+  q3Badge: null, // No badge - not enough reviews
+  harmonies: { count: 0, total: 0 }, // No harmonies yet
 };
 
 export const NEUTRAL_PROFILE: TestProfile = {
@@ -144,19 +135,20 @@ export const NEUTRAL_PROFILE: TestProfile = {
   pronouns: 'they/them',
   profileType: 'neutral',
   reviewsTypeA: NEUTRAL_REVIEWS_A,
-  averageRatingTypeA: 3.5,
+  averageRatingTypeA: 0, // No reviews yet
   badgesTypeB: NEUTRAL_BADGES_B,
-  totalReviews: 2,
+  totalReviews: 0, // NEW USER
 };
 
 // ============================================
-// NEGATIVE PROFILE (Low Trust)
+// NEGATIVE PROFILE (Obviously Bad Reviews)
 // ============================================
+// 6 reviews with 1-2 stars, clearly problematic behavior
 
 const NEGATIVE_REVIEWS_A: ReviewTypeA[] = [
   {
     type: 'A',
-    stars: 2,
+    stars: 1,
     comment: 'Showed up 30 minutes late with no apology or heads up.',
     reviewerName: 'Sam J.',
     daysAgo: 5,
@@ -177,7 +169,7 @@ const NEGATIVE_REVIEWS_A: ReviewTypeA[] = [
   },
   {
     type: 'A',
-    stars: 2,
+    stars: 1,
     comment: 'Spent the whole show on their phone instead of watching the band.',
     reviewerName: 'Riley K.',
     daysAgo: 25,
@@ -212,7 +204,7 @@ export const NEGATIVE_PROFILE: TestProfile = {
   pronouns: 'she/her',
   profileType: 'negative',
   reviewsTypeA: NEGATIVE_REVIEWS_A,
-  averageRatingTypeA: 2.1,
+  averageRatingTypeA: 1.5, // Obviously bad: (1+1+2+1+2+2)/6 = 1.5
   badgesTypeB: NEGATIVE_BADGES_B,
   totalReviews: 6,
 };
