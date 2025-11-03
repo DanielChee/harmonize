@@ -4,6 +4,9 @@
 -- Variant A: Amazon-style reviews vs Variant B: Badge system
 -- ============================================
 
+-- Enable UUID extension (may already be enabled in Supabase)
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- ============================================
 -- 1. User Variant Assignments
 -- Tracks which variant each user is assigned to
@@ -197,8 +200,8 @@ SELECT
   ROUND(100.0 * SUM(CASE WHEN decision_correct = true THEN 1 ELSE 0 END) / COUNT(*), 2) as accuracy_rate_pct,
 
   -- Time metrics
-  ROUND(AVG(time_spent_seconds), 2) as avg_time_spent_seconds,
-  ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY time_spent_seconds), 2) as median_time_spent_seconds
+  ROUND(AVG(time_spent_seconds)::NUMERIC, 2) as avg_time_spent_seconds,
+  ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY time_spent_seconds)::NUMERIC, 2) as median_time_spent_seconds
 
 FROM ab_test_interactions
 WHERE decision IS NOT NULL
@@ -227,7 +230,7 @@ SELECT
   ROUND(100.0 * SUM(CASE WHEN decision_correct = true THEN 1 ELSE 0 END) / COUNT(*), 2) as accuracy_rate_pct,
 
   -- Time
-  ROUND(AVG(time_spent_seconds), 2) as avg_time_spent_seconds
+  ROUND(AVG(time_spent_seconds)::NUMERIC, 2) as avg_time_spent_seconds
 
 FROM ab_test_interactions
 WHERE decision IS NOT NULL
@@ -244,7 +247,7 @@ SELECT
   COUNT(i.id) as total_interactions,
   SUM(CASE WHEN i.decision_correct = true THEN 1 ELSE 0 END) as correct_decisions,
   ROUND(100.0 * SUM(CASE WHEN i.decision_correct = true THEN 1 ELSE 0 END) / NULLIF(COUNT(i.id), 0), 2) as accuracy_pct,
-  ROUND(AVG(i.time_spent_seconds), 2) as avg_time_spent
+  ROUND(AVG(i.time_spent_seconds)::NUMERIC, 2) as avg_time_spent
 FROM ab_test_assignments a
 LEFT JOIN ab_test_interactions i ON a.user_id = i.user_id
 GROUP BY a.user_id, a.assigned_variant, a.assigned_at
