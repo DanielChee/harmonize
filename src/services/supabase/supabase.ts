@@ -1,17 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-// Detect web vs native
-const isWeb = typeof window !== "undefined";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
+// Create Supabase client WITHOUT auth persistence
+// This allows multiple users/participants to use the same app instance
+// Each participant is identified by their participant_id in the data, not by auth session
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: isWeb ? undefined : AsyncStorage, // don't use AsyncStorage on web
-    autoRefreshToken: !isWeb,
-    persistSession: !isWeb,
-    detectSessionInUrl: isWeb,
+    persistSession: false, // CRITICAL: Don't persist sessions - allows multiple participants per device
+    autoRefreshToken: false,
   },
 });

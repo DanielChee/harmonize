@@ -59,6 +59,12 @@ export const useABTestStore = create<ABTestStore>((set, get) => ({
       // Get existing assignment
       let assignment = await getUserAssignment();
 
+      // Check if existing assignment belongs to a different user
+      if (assignment && assignment.userId !== userId) {
+        console.log(`[A/B Test] User mismatch! Stored: ${assignment.userId}, Current: ${userId}. Creating new assignment...`);
+        assignment = null; // Clear mismatched assignment
+      }
+
       // If forcing a variant, check if we need to reassign
       if (shouldForceVariant && assignment) {
         if (assignment.assignedVariant !== forceVariant) {

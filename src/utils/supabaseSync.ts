@@ -3,7 +3,7 @@
  * Syncs A/B test data from AsyncStorage to Supabase
  */
 
-import { supabase } from '@utils/supabase';
+import { supabase } from '@services/supabase/supabase';
 import type { ProfileInteractionMetrics, UserVariantAssignment } from '@types';
 
 /**
@@ -11,22 +11,33 @@ import type { ProfileInteractionMetrics, UserVariantAssignment } from '@types';
  */
 export async function syncAssignment(assignment: UserVariantAssignment): Promise<void> {
   try {
-    const { error } = await supabase.from('ab_test_assignments').upsert({
+    console.log('[Supabase Sync] Starting assignment sync for user:', assignment.userId);
+
+    const payload = {
       user_id: assignment.userId,
       assigned_variant: assignment.assignedVariant,
       assigned_at: new Date(assignment.assignedAt).toISOString(),
       created_at: new Date(assignment.assignedAt).toISOString(),
       updated_at: new Date().toISOString(),
-    });
+    };
+
+    console.log('[Supabase Sync] Assignment payload:', JSON.stringify(payload, null, 2));
+
+    const { data, error } = await supabase.from('ab_test_assignments').upsert(payload);
 
     if (error) {
-      console.error('[Supabase Sync] Error syncing assignment:', error);
+      console.error('[Supabase Sync] ❌ Error syncing assignment:', JSON.stringify(error, null, 2));
+      console.error('[Supabase Sync] Error details:', error.message, error.code, error.hint);
       throw error;
     }
 
-    console.log('[Supabase Sync] Assignment synced for user:', assignment.userId);
-  } catch (error) {
-    console.error('[Supabase Sync] Failed to sync assignment:', error);
+    console.log('[Supabase Sync] ✅ Assignment synced successfully for user:', assignment.userId);
+    console.log('[Supabase Sync] Response data:', data);
+  } catch (error: any) {
+    console.error('[Supabase Sync] ❌ CRITICAL: Failed to sync assignment for user:', assignment.userId);
+    console.error('[Supabase Sync] Error type:', error?.name);
+    console.error('[Supabase Sync] Error message:', error?.message);
+    console.error('[Supabase Sync] Full error:', error);
     // Don't throw - allow app to continue even if sync fails
   }
 }
@@ -39,9 +50,11 @@ export async function syncInteraction(
   interaction: ProfileInteractionMetrics
 ): Promise<void> {
   try {
+    console.log(`[Supabase Sync] Starting interaction sync for user: ${userId}`);
+
     const timeSpent = interaction.timeSpentSeconds || 0;
 
-    const { error } = await supabase.from('ab_test_interactions').insert({
+    const payload = {
       user_id: userId,
       variant_shown: interaction.variantShown,
       profile_id: interaction.profileId,
@@ -56,18 +69,27 @@ export async function syncInteraction(
       session_id: interaction.sessionId || null,
       device_type: interaction.deviceType || null,
       created_at: new Date(interaction.timestamp).toISOString(),
-    });
+    };
+
+    console.log('[Supabase Sync] Interaction payload:', JSON.stringify(payload, null, 2));
+
+    const { data, error } = await supabase.from('ab_test_interactions').insert(payload);
 
     if (error) {
-      console.error('[Supabase Sync] Error syncing interaction:', error);
+      console.error('[Supabase Sync] ❌ Error syncing interaction:', JSON.stringify(error, null, 2));
+      console.error('[Supabase Sync] Error details:', error.message, error.code, error.hint);
       throw error;
     }
 
     console.log(
-      `[Supabase Sync] Interaction synced: ${interaction.decision} on ${interaction.profileType}`
+      `[Supabase Sync] ✅ Interaction synced: ${interaction.decision} on ${interaction.profileType} for user ${userId}`
     );
-  } catch (error) {
-    console.error('[Supabase Sync] Failed to sync interaction:', error);
+    console.log('[Supabase Sync] Response data:', data);
+  } catch (error: any) {
+    console.error(`[Supabase Sync] ❌ CRITICAL: Failed to sync interaction for user: ${userId}`);
+    console.error('[Supabase Sync] Error type:', error?.name);
+    console.error('[Supabase Sync] Error message:', error?.message);
+    console.error('[Supabase Sync] Full error:', error);
     // Don't throw - allow app to continue even if sync fails
   }
 }
