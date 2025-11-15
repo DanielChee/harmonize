@@ -23,15 +23,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="concerts"
-        options={{
-          title: "Concerts",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="ticket-confirmation-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="meet"
         options={{
           title: "Meet",

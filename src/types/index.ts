@@ -52,11 +52,7 @@ export interface User {
 
 // Re-export Spotify types from spotify-types.ts
 export type {
-  SpotifyData,
-  SpotifyArtist,
-  SpotifyTrack,
-  ArtistObject,
-  TrackObject
+  ArtistObject, SpotifyArtist, SpotifyData, SpotifyTrack, TrackObject
 } from './spotify-types';
 
 export interface Match {
@@ -197,12 +193,6 @@ export interface MessageInputProps {
   onSend: (message: string) => void;
   placeholder?: string;
   disabled?: boolean;
-}
-
-export interface ConcertCardProps {
-  concert: ConcertEvent;
-  onInterest: (type: ConcertInterest['interest_type']) => void;
-  userInterest?: ConcertInterest;
 }
 
 // Navigation Types

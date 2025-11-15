@@ -3,13 +3,13 @@
  * Shows test profiles with text reviews and star ratings
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
-import { Card, LookingForSection, ConcertPreferencesGrid } from '@components';
+import { Card, ConcertPreferencesGrid, LookingForSection } from '@components';
+import { BORDER_RADIUS, COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { TestProfile } from '@types';
-import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from '@constants';
 import { responsiveSizes } from '@utils/responsive';
+import React from 'react';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 interface ProfileCardAProps {
   profile: TestProfile;
@@ -263,23 +263,34 @@ export function ProfileCardA({ profile }: ProfileCardAProps) {
             <Text style={styles.star}>★</Text>
           </View>
         </View>
-        {profile.reviewsTypeA.map((review, index) => (
-          <View key={index} style={styles.reviewCard}>
-            <View style={styles.reviewHeader}>
-              <Text style={styles.reviewerName}>{review.reviewerName}</Text>
-              <View style={styles.reviewStars}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Text key={i} style={i < review.stars ? styles.starFilled : styles.starEmpty}>
-                    ★
-                  </Text>
-                ))}
+
+        {/* CHECK FIXED HERE */}
+        {(!profile.reviewsTypeA ||
+          !Array.isArray(profile.reviewsTypeA) ||
+          profile.reviewsTypeA.length === 0) ? (
+          <Text style={{ color: COLORS.text.secondary, fontSize: TYPOGRAPHY.sizes.sm, textAlign: 'center' }}>
+            No reviews yet!
+          </Text>
+        ) : (
+          profile.reviewsTypeA.map((review, index) => (
+            <View key={index} style={styles.reviewCard}>
+              <View style={styles.reviewHeader}>
+                <Text style={styles.reviewerName}>{review.reviewerName}</Text>
+                <View style={styles.reviewStars}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Text key={i} style={i < review.stars ? styles.starFilled : styles.starEmpty}>
+                      ★
+                    </Text>
+                  ))}
+                </View>
               </View>
+              <Text style={styles.reviewComment}>{review.comment}</Text>
+              <Text style={styles.reviewDate}>{review.daysAgo} days ago</Text>
             </View>
-            <Text style={styles.reviewComment}>{review.comment}</Text>
-            <Text style={styles.reviewDate}>{review.daysAgo} days ago</Text>
-          </View>
-        ))}
+          ))
+        )}
       </Card>
+
 
       {/* Concert Preferences */}
       <Card style={styles.section}>
