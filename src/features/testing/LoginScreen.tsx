@@ -3,12 +3,12 @@
  * Allows researchers to identify test participants and toggle dev/tester mode
  */
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { BORDER_RADIUS, COLORS, SPACING } from '@constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from '@constants';
 import { useABTestStore } from '@store';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const STORAGE_KEYS = {
   PARTICIPANT_ID: '@harmonize_participant_id',
@@ -122,6 +122,16 @@ export function LoginScreen() {
     );
   };
 
+  const handleResetDailyLikes = async () => {
+    try {
+      await AsyncStorage.removeItem("@harmonize_daily_likes");
+      Alert.alert("Reset Complete", "Daily like limit has been reset.");
+    } catch (error) {
+      console.error("[Login] Error resetting daily likes:", error);
+      Alert.alert("Error", "Failed to reset daily likes.");
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
@@ -231,6 +241,17 @@ export function LoginScreen() {
           disabled={isLoading}
         >
           <Text style={styles.clearButtonText}>Clear All Data</Text>
+        </TouchableOpacity>
+
+        {/* Reset Daily Likes (Developer Only) */}
+        <TouchableOpacity
+          style={[styles.clearButton, { marginTop: SPACING.sm, borderColor: COLORS.primary }]}
+          onPress={handleResetDailyLikes}
+          disabled={isLoading}
+        >
+          <Text style={[styles.clearButtonText, { color: COLORS.primary }]}>
+            Reset Daily Likes
+          </Text>
         </TouchableOpacity>
 
         {/* Info */}

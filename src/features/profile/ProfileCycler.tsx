@@ -1,16 +1,16 @@
 // Profile Cycler Component
 // Cycles through 3 test profiles + real Spotify data profile
 
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { ProfileCardHigh } from './ProfileCardHigh';
-import { ProfileCardMid } from './ProfileCardMid';
-import { ProfileCardLow } from './ProfileCardLow';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
-import { TEST_PROFILES } from '@utils/profileCycler';
+import { MaterialIcons } from '@expo/vector-icons';
 import { fetchAllSpotifyData, getValidAccessToken } from '@services/spotify';
-import type { User, SpotifyData } from '@types';
+import type { SpotifyData, User } from '@types';
+import { TEST_PROFILES } from '@utils/profileCycler';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ProfileCardHigh } from './ProfileCardHigh';
+import { ProfileCardLow } from './ProfileCardLow';
+import { ProfileCardMid } from './ProfileCardMid';
 
 type ViewMode = 'high' | 'mid' | 'low';
 
@@ -123,6 +123,14 @@ export const ProfileCycler: React.FC<ProfileCyclerProps> = ({ defaultViewMode = 
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity
+            style={styles.controlButton}
+            onPress={cycleViewMode}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="visibility" size={20} color={COLORS.text.primary} />
+            <Text style={styles.controlText}>{getViewModeLabel()}</Text>
+          </TouchableOpacity>
       {/* Header Controls */}
       <View style={styles.header}>
         <View style={styles.headerRow}>

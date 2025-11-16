@@ -1,15 +1,19 @@
 import { COLORS } from "@constants";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useABTestStore } from "@store";
 import type { TestProfile } from "@types";
-import { TEST_PROFILES } from "@utils/testProfiles";
 import { responsiveSizes } from "@utils/responsive";
-import { useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator, Alert } from "react-native";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TEST_PROFILES } from "@utils/testProfiles";
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { ABTestProfileCard } from "../testing/ABTestProfileCard";
 import styles from "./styles";
+
+const MAX_LIKES_PER_DAY = 5;
+const STORAGE_KEY = "@harmonize_daily_likes";
+
 
 export default function MatchScreen() {
   const router = useRouter();
@@ -17,6 +21,7 @@ export default function MatchScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [profileLoadTime, setProfileLoadTime] = useState<number>(0);
   const [isTesterMode, setIsTesterMode] = useState(true); // Default to tester mode (clean UI)
+  
 
   // Initialize A/B test on mount
   useEffect(() => {
@@ -62,20 +67,52 @@ export default function MatchScreen() {
   };
 
   const handleLike = async () => {
-    const currentProfile = TEST_PROFILES[currentIndex];
-    if (currentProfile) {
-      // Track decision
-      await trackDecision(
-        currentProfile.id,
-        currentProfile.profileType,
-        profileLoadTime,
-        'like'
-      );
-      console.log('Liked profile:', currentProfile.name, '(', currentProfile.profileType, ')');
-    }
-    // Move to next profile
-    handleNext();
-  };
+  const today = new Date().toISOString().split("T")[0]; // e.g. "2025-11-15"
+
+  // 1. Load current like count
+  const stored = await AsyncStorage.getItem(STORAGE_KEY);
+  let data = stored ? JSON.parse(stored) : { date: today, count: 0 };
+
+  // 2. Reset if it's a new day
+  if (data.date !== today) {
+    data = { date: today, count: 0 };
+  }
+
+  // 3. Enforce daily limit
+  if (data.count >= MAX_LIKES_PER_DAY) {
+    Alert.alert(
+      "Daily Limit Reached",
+      `You've used your ${MAX_LIKES_PER_DAY} likes for today as a free harmonize user. Come back tomorrow for more likes!`
+    );
+    return; // 🚫 Stop – do not register the like
+  }
+
+  // 4. Process the like action
+  const currentProfile = TEST_PROFILES[currentIndex];
+  if (currentProfile) {
+    await trackDecision(
+      currentProfile.id,
+      currentProfile.profileType,
+      profileLoadTime,
+      "like"
+    );
+    console.log(
+      "Liked profile:",
+      currentProfile.name,
+      "(",
+      currentProfile.profileType,
+      ")"
+    );
+  }
+
+  // 5. Store updated count
+  data.count += 1;
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+  // 6. Move to next profile
+  handleNext();
+};
+
 
   const handlePass = async () => {
     const currentProfile = TEST_PROFILES[currentIndex];
