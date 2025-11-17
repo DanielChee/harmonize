@@ -8,6 +8,9 @@ export interface User {
   created_at?: string;
   updated_at?: string;
 
+  // Authentication
+  email?: string; // User's email from Supabase auth
+
   // Basic Profile
   username: string;
   display_name: string;

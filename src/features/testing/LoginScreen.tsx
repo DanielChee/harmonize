@@ -1,270 +1,405 @@
 /**
- * Test Participant Login Screen
- * Allows researchers to identify test participants and toggle dev/tester mode
+ * Authentication Login Screen
+ * Handles user signup and signin with email/password and username
  */
 
 import { BORDER_RADIUS, COLORS, SPACING } from '@constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useABTestStore } from '@store';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
-
-const STORAGE_KEYS = {
-  PARTICIPANT_ID: '@harmonize_participant_id',
-  IS_TESTER_MODE: '@harmonize_is_tester_mode',
-  FORCE_VARIANT: '@harmonize_force_variant', // Force a specific variant for testing
-  HAS_LOGGED_IN: '@harmonize_has_logged_in',
-};
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import {
+  signUp,
+  signIn,
+  signOut,
+  getSession,
+  isValidEmail,
+  isValidPassword,
+  isValidUsername,
+  checkUsernameAvailable,
+} from '@services/supabase/auth';
+import { useUserStore } from '@store';
+import { getUserProfile } from '@services/supabase/user';
 
 export function LoginScreen() {
   const router = useRouter();
-  const { initialize } = useABTestStore();
+  const { setCurrentUser, reset: resetUserStore } = useUserStore();
 
-  const [participantId, setParticipantId] = useState('');
-  const [isTesterMode, setIsTesterMode] = useState(true); // Default to tester mode
-  const [selectedVariant, setSelectedVariant] = useState<'random' | 'A' | 'B'>('random');
+  // Form state
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [username, setUsername] = useState('');
+
+  // UI state
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
 
-  // Check if user is already logged in
+  // Check for existing session on mount
   useEffect(() => {
-    checkExistingLogin();
+    checkExistingSession();
   }, []);
 
-  const checkExistingLogin = async () => {
-    try {
-      const hasLoggedIn = await AsyncStorage.getItem(STORAGE_KEYS.HAS_LOGGED_IN);
-      const savedParticipantId = await AsyncStorage.getItem(STORAGE_KEYS.PARTICIPANT_ID);
-      const savedMode = await AsyncStorage.getItem(STORAGE_KEYS.IS_TESTER_MODE);
-
-      if (hasLoggedIn === 'true' && savedParticipantId) {
-        // User is already logged in, navigate to app
-        console.log('[Login] Existing session found:', savedParticipantId, 'Mode:', savedMode);
-        router.replace('/(tabs)/match');
-      }
-    } catch (error) {
-      console.error('[Login] Error checking existing login:', error);
-    }
-  };
-
-  const handleLogin = async () => {
-    // Validate participant ID
-    if (!participantId.trim()) {
-      Alert.alert('Required', 'Please enter a participant ID');
+  // Debounced username availability check
+  useEffect(() => {
+    if (!isSignUp || !username || username.length < 3) {
+      setUsernameStatus('idle');
       return;
     }
 
-    // Validate format (alphanumeric, 3-20 characters)
-    if (!/^[a-zA-Z0-9_-]{3,20}$/.test(participantId.trim())) {
-      Alert.alert(
-        'Invalid ID',
-        'Participant ID must be 3-20 characters (letters, numbers, _, -)'
-      );
+    if (!isValidUsername(username)) {
+      setUsernameStatus('idle');
+      return;
+    }
+
+    setUsernameStatus('checking');
+    const timeout = setTimeout(async () => {
+      const available = await checkUsernameAvailable(username);
+      setUsernameStatus(available ? 'available' : 'taken');
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [username, isSignUp]);
+
+  const checkExistingSession = async () => {
+    try {
+      const session = await getSession();
+      if (session?.user) {
+        console.log('[Login] Existing session found:', session.user.email);
+        // Load user profile
+        const profile = await getUserProfile(session.user.id);
+        if (profile) {
+          setCurrentUser(profile);
+        }
+        router.replace('/(tabs)/match');
+      }
+    } catch (error) {
+      console.error('[Login] Error checking session:', error);
+    } finally {
+      setIsCheckingSession(false);
+    }
+  };
+
+  const validateForm = (): string | null => {
+    if (!email.trim()) {
+      return 'Email is required';
+    }
+    if (!isValidEmail(email.trim())) {
+      return 'Please enter a valid email address';
+    }
+    if (!password) {
+      return 'Password is required';
+    }
+    if (!isValidPassword(password)) {
+      return 'Password must be at least 6 characters';
+    }
+
+    if (isSignUp) {
+      if (!username.trim()) {
+        return 'Username is required';
+      }
+      if (!isValidUsername(username.trim())) {
+        return 'Username must be 3-20 characters (letters, numbers, _, -)';
+      }
+      if (usernameStatus === 'taken') {
+        return 'Username is already taken';
+      }
+      if (password !== confirmPassword) {
+        return 'Passwords do not match';
+      }
+    }
+
+    return null;
+  };
+
+  const handleSignUp = async () => {
+    const validationError = validateForm();
+    if (validationError) {
+      Alert.alert('Validation Error', validationError);
       return;
     }
 
     setIsLoading(true);
-
     try {
-      const cleanId = participantId.trim();
+      const { user, error } = await signUp({
+        email: email.trim(),
+        password,
+        username: username.trim(),
+      });
 
-      // Store participant info
-      await AsyncStorage.setItem(STORAGE_KEYS.PARTICIPANT_ID, cleanId);
-      await AsyncStorage.setItem(STORAGE_KEYS.IS_TESTER_MODE, isTesterMode.toString());
-      await AsyncStorage.setItem(STORAGE_KEYS.FORCE_VARIANT, selectedVariant);
-      await AsyncStorage.setItem(STORAGE_KEYS.HAS_LOGGED_IN, 'true');
+      if (error) {
+        Alert.alert('Sign Up Failed', error.message);
+        return;
+      }
 
-      console.log('[Login] Participant logged in:', cleanId);
-      console.log('[Login] Mode:', isTesterMode ? 'TESTER' : 'DEV');
-      console.log('[Login] Variant Selection:', selectedVariant);
-
-      // Initialize A/B test with participant ID
-      await initialize(cleanId);
-
-      // Navigate to app
-      router.replace('/(tabs)/match');
+      if (user) {
+        // Load the created profile
+        const profile = await getUserProfile(user.id);
+        if (profile) {
+          setCurrentUser(profile);
+        }
+        Alert.alert('Welcome!', 'Account created successfully', [
+          {
+            text: 'Continue',
+            onPress: () => router.replace('/(tabs)/match'),
+          },
+        ]);
+      }
     } catch (error) {
-      console.error('[Login] Error during login:', error);
-      Alert.alert('Error', 'Failed to log in. Please try again.');
+      console.error('[Login] Sign up error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleClearData = async () => {
-    Alert.alert(
-      'Clear All Data',
-      'This will log you out and delete all test data. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AsyncStorage.multiRemove([
-                STORAGE_KEYS.PARTICIPANT_ID,
-                STORAGE_KEYS.IS_TESTER_MODE,
-                STORAGE_KEYS.FORCE_VARIANT,
-                STORAGE_KEYS.HAS_LOGGED_IN,
-                '@harmonize_ab_test_assignment',
-                '@harmonize_ab_test_interactions',
-              ]);
-              Alert.alert('Success', 'All data cleared. You can log in again.');
-              setParticipantId('');
-            } catch (error) {
-              console.error('[Login] Error clearing data:', error);
-              Alert.alert('Error', 'Failed to clear data');
-            }
-          },
-        },
-      ]
-    );
-  };
+  const handleSignIn = async () => {
+    const validationError = validateForm();
+    if (validationError) {
+      Alert.alert('Validation Error', validationError);
+      return;
+    }
 
-  const handleResetDailyLikes = async () => {
+    setIsLoading(true);
     try {
-      await AsyncStorage.removeItem("@harmonize_daily_likes");
-      Alert.alert("Reset Complete", "Daily like limit has been reset.");
+      const { user, error } = await signIn({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) {
+        Alert.alert('Sign In Failed', error.message);
+        return;
+      }
+
+      if (user) {
+        // Load user profile
+        const profile = await getUserProfile(user.id);
+        if (profile) {
+          setCurrentUser(profile);
+        }
+        router.replace('/(tabs)/match');
+      }
     } catch (error) {
-      console.error("[Login] Error resetting daily likes:", error);
-      Alert.alert("Error", "Failed to reset daily likes.");
+      console.error('[Login] Sign in error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const handleSignOut = async () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          setIsLoading(true);
+          try {
+            await signOut();
+            resetUserStore();
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+            setUsername('');
+            Alert.alert('Success', 'You have been signed out');
+          } catch (error) {
+            console.error('[Login] Sign out error:', error);
+            Alert.alert('Error', 'Failed to sign out');
+          } finally {
+            setIsLoading(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const toggleMode = () => {
+    setIsSignUp(!isSignUp);
+    setPassword('');
+    setConfirmPassword('');
+    setUsernameStatus('idle');
+  };
+
+  if (isCheckingSession) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.loadingText}>Checking session...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Harmonize</Text>
-          <Text style={styles.subtitle}>User Research Study</Text>
-        </View>
-
-        {/* Participant ID Input */}
-        <View style={styles.inputSection}>
-          <Text style={styles.label}>Participant ID</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., P001, researcher-1"
-            placeholderTextColor={COLORS.text.tertiary}
-            value={participantId}
-            onChangeText={setParticipantId}
-            autoCapitalize="none"
-            autoCorrect={false}
-            editable={!isLoading}
-          />
-          <Text style={styles.hint}>
-            Enter your assigned participant ID (3-20 characters)
-          </Text>
-        </View>
-
-        {/* Variant Selection */}
-        <View style={styles.modeSection}>
-          <Text style={styles.modeLabel}>A/B Test Variant</Text>
-          <View style={styles.variantButtons}>
-            <TouchableOpacity
-              style={[styles.variantButton, selectedVariant === 'random' && styles.variantButtonActive]}
-              onPress={() => setSelectedVariant('random')}
-              disabled={isLoading}
-            >
-              <Text style={[styles.variantButtonText, selectedVariant === 'random' && styles.variantButtonTextActive]}>
-                Random
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.variantButton, selectedVariant === 'A' && styles.variantButtonActive]}
-              onPress={() => setSelectedVariant('A')}
-              disabled={isLoading}
-            >
-              <Text style={[styles.variantButtonText, selectedVariant === 'A' && styles.variantButtonTextActive]}>
-                Variant A
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.variantButton, selectedVariant === 'B' && styles.variantButtonActive]}
-              onPress={() => setSelectedVariant('B')}
-              disabled={isLoading}
-            >
-              <Text style={[styles.variantButtonText, selectedVariant === 'B' && styles.variantButtonTextActive]}>
-                Variant B
-              </Text>
-            </TouchableOpacity>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Harmonize</Text>
+            <Text style={styles.subtitle}>
+              {isSignUp ? 'Create Account' : 'Welcome Back'}
+            </Text>
           </View>
-          <Text style={styles.modeDescription}>
-            {selectedVariant === 'random'
-              ? '50/50 random assignment'
-              : selectedVariant === 'A'
-              ? 'Amazon-style reviews (stars + text)'
-              : 'Badge system (visual badges)'}
-          </Text>
-        </View>
 
-        {/* Mode Toggle */}
-        <View style={styles.modeSection}>
-          <View style={styles.modeHeader}>
-            <View>
-              <Text style={styles.modeLabel}>
-                Developer Mode
-              </Text>
-              <Text style={styles.modeDescription}>
-                {isTesterMode
-                  ? 'OFF - Clean UI for user research participants'
-                  : 'ON - Shows variant info and debug logs'}
-              </Text>
-            </View>
-            <Switch
-              value={!isTesterMode}
-              onValueChange={(value) => setIsTesterMode(!value)}
-              trackColor={{ false: COLORS.border, true: COLORS.primary }}
-              thumbColor={COLORS.background}
-              disabled={isLoading}
+          {/* Email Input */}
+          <View style={styles.inputSection}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="your@email.com"
+              placeholderTextColor={COLORS.text.tertiary}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              editable={!isLoading}
             />
           </View>
+
+          {/* Username Input (Sign Up only) */}
+          {isSignUp && (
+            <View style={styles.inputSection}>
+              <Text style={styles.label}>Username</Text>
+              <View style={styles.inputWithStatus}>
+                <TextInput
+                  style={[styles.input, styles.inputFlex]}
+                  placeholder="your_username"
+                  placeholderTextColor={COLORS.text.tertiary}
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+                {usernameStatus === 'checking' && (
+                  <ActivityIndicator size="small" color={COLORS.primary} style={styles.statusIcon} />
+                )}
+                {usernameStatus === 'available' && (
+                  <Text style={[styles.statusIcon, styles.statusAvailable]}>✓</Text>
+                )}
+                {usernameStatus === 'taken' && (
+                  <Text style={[styles.statusIcon, styles.statusTaken]}>✗</Text>
+                )}
+              </View>
+              <Text style={styles.hint}>
+                3-20 characters (letters, numbers, _, -)
+              </Text>
+              {usernameStatus === 'taken' && (
+                <Text style={styles.errorHint}>Username is already taken</Text>
+              )}
+            </View>
+          )}
+
+          {/* Password Input */}
+          <View style={styles.inputSection}>
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              placeholderTextColor={COLORS.text.tertiary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete={isSignUp ? 'new-password' : 'current-password'}
+              editable={!isLoading}
+            />
+            {isSignUp && (
+              <Text style={styles.hint}>At least 6 characters</Text>
+            )}
+          </View>
+
+          {/* Confirm Password (Sign Up only) */}
+          {isSignUp && (
+            <View style={styles.inputSection}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor={COLORS.text.tertiary}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="new-password"
+                editable={!isLoading}
+              />
+            </View>
+          )}
+
+          {/* Primary Action Button */}
+          <TouchableOpacity
+            style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
+            onPress={isSignUp ? handleSignUp : handleSignIn}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color={COLORS.text.inverse} />
+            ) : (
+              <Text style={styles.primaryButtonText}>
+                {isSignUp ? 'Create Account' : 'Sign In'}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Toggle Mode */}
+          <TouchableOpacity
+            style={styles.toggleButton}
+            onPress={toggleMode}
+            disabled={isLoading}
+          >
+            <Text style={styles.toggleButtonText}>
+              {isSignUp
+                ? 'Already have an account? Sign In'
+                : "Don't have an account? Sign Up"}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Sign Out Button (for testing) */}
+          <TouchableOpacity
+            style={styles.signOutButton}
+            onPress={handleSignOut}
+            disabled={isLoading}
+          >
+            <Text style={styles.signOutButtonText}>Sign Out Current Session</Text>
+          </TouchableOpacity>
+
+          {/* Info */}
+          <View style={styles.infoSection}>
+            <Text style={styles.infoText}>
+              🔒 Your data is secured with Supabase authentication
+            </Text>
+            <Text style={styles.infoText}>
+              🎵 Connect with concert buddies who share your music taste
+            </Text>
+          </View>
         </View>
-
-        {/* Login Button */}
-        <TouchableOpacity
-          style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-          onPress={handleLogin}
-          disabled={isLoading}
-        >
-          <Text style={styles.loginButtonText}>
-            {isLoading ? 'Starting...' : 'Start Session'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Clear Data Button (for researchers) */}
-        <TouchableOpacity
-          style={styles.clearButton}
-          onPress={handleClearData}
-          disabled={isLoading}
-        >
-          <Text style={styles.clearButtonText}>Clear All Data</Text>
-        </TouchableOpacity>
-
-        {/* Reset Daily Likes (Developer Only) */}
-        <TouchableOpacity
-          style={[styles.clearButton, { marginTop: SPACING.sm, borderColor: COLORS.primary }]}
-          onPress={handleResetDailyLikes}
-          disabled={isLoading}
-        >
-          <Text style={[styles.clearButtonText, { color: COLORS.primary }]}>
-            Reset Daily Likes
-          </Text>
-        </TouchableOpacity>
-
-        {/* Info */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoText}>
-            💡 Your interactions will be tracked for research purposes.
-          </Text>
-          <Text style={styles.infoText}>
-            🔒 All data is stored locally and anonymized.
-          </Text>
-        </View>
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -272,6 +407,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,
@@ -293,8 +435,13 @@ const styles = StyleSheet.create({
     color: COLORS.text.secondary,
     fontWeight: '500',
   },
+  loadingText: {
+    fontSize: 16,
+    color: COLORS.text.secondary,
+    marginTop: SPACING.md,
+  },
   inputSection: {
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
   },
   label: {
     fontSize: 16,
@@ -310,88 +457,69 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     fontSize: 16,
     color: COLORS.text.primary,
-    marginBottom: SPACING.xs,
+  },
+  inputWithStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputFlex: {
+    flex: 1,
+  },
+  statusIcon: {
+    marginLeft: SPACING.sm,
+    fontSize: 20,
+  },
+  statusAvailable: {
+    color: COLORS.success,
+  },
+  statusTaken: {
+    color: COLORS.error,
   },
   hint: {
-    fontSize: 14,
-    color: COLORS.text.secondary,
-  },
-  modeSection: {
-    marginBottom: SPACING.xl,
-  },
-  modeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-  },
-  modeLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text.primary,
-    marginBottom: SPACING.xs,
-  },
-  modeDescription: {
     fontSize: 13,
     color: COLORS.text.secondary,
-    maxWidth: '80%',
     marginTop: SPACING.xs,
   },
-  variantButtons: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    marginVertical: SPACING.sm,
+  errorHint: {
+    fontSize: 13,
+    color: COLORS.error,
+    marginTop: SPACING.xs,
   },
-  variantButton: {
-    flex: 1,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-  },
-  variantButtonActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '20',
-  },
-  variantButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text.secondary,
-  },
-  variantButtonTextActive: {
-    color: COLORS.primary,
-  },
-  loginButton: {
+  primaryButton: {
     backgroundColor: COLORS.primary,
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginTop: SPACING.md,
   },
-  loginButtonDisabled: {
+  buttonDisabled: {
     opacity: 0.5,
   },
-  loginButtonText: {
+  primaryButtonText: {
     fontSize: 18,
     fontWeight: '600',
     color: COLORS.text.inverse,
   },
-  clearButton: {
+  toggleButton: {
+    padding: SPACING.md,
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+  },
+  toggleButtonText: {
+    fontSize: 15,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  signOutButton: {
     backgroundColor: 'transparent',
     padding: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.error,
+    marginTop: SPACING.lg,
   },
-  clearButtonText: {
+  signOutButtonText: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.error,
