@@ -83,3 +83,41 @@ export async function getUserProfile(userId: string): Promise<User | null> {
     return null;
   }
 }
+
+/**
+ * Check if a user profile is complete
+ * A profile is complete if all required fields are filled:
+ * - display_name, bio, pronouns, age, city
+ * - profile_picture_url
+ * - concert preferences (budget, seating, transportation)
+ */
+export function isProfileComplete(user: User | null): boolean {
+  if (!user) return false;
+
+  // Check if explicitly marked as complete
+  if (user.profile_complete === true) return true;
+
+  // Required basic fields
+  const hasBasicInfo =
+    user.display_name &&
+    user.display_name.trim() !== "" &&
+    user.bio &&
+    user.bio.trim() !== "" &&
+    user.pronouns &&
+    user.pronouns.trim() !== "" &&
+    user.age > 0 &&
+    user.city &&
+    user.city.trim() !== "";
+
+  // Required media
+  const hasProfilePicture =
+    user.profile_picture_url && user.profile_picture_url.trim() !== "";
+
+  // Required concert preferences
+  const hasConcertPreferences =
+    user.concert_budget &&
+    user.concert_seating &&
+    user.concert_transportation;
+
+  return hasBasicInfo && hasProfilePicture && hasConcertPreferences;
+}

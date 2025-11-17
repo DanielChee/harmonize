@@ -29,7 +29,7 @@ import {
   checkUsernameAvailable,
 } from '@services/supabase/auth';
 import { useUserStore } from '@store';
-import { getUserProfile } from '@services/supabase/user';
+import { getUserProfile, isProfileComplete } from '@services/supabase/user';
 import type { Session } from '@supabase/supabase-js';
 
 export function LoginScreen() {
@@ -86,7 +86,12 @@ export function LoginScreen() {
         if (profile) {
           setCurrentUser(profile);
         }
-        router.replace('/(tabs)/match');
+        // Check if profile is complete - redirect to profile setup if not
+        if (!profile || !isProfileComplete(profile)) {
+          router.replace('/profile-setup');
+        } else {
+          router.replace('/(tabs)/match');
+        }
       }
     } catch (error) {
       console.error('[Login] Error checking session:', error);
@@ -166,12 +171,8 @@ export function LoginScreen() {
         if (profile) {
           setCurrentUser(profile);
         }
-        Alert.alert('Welcome!', 'Account created successfully', [
-          {
-            text: 'Continue',
-            onPress: () => router.replace('/(tabs)/match'),
-          },
-        ]);
+        // Redirect to profile setup for new users
+        router.replace('/profile-setup');
       }
     } catch (error) {
       console.error('[Login] Sign up error:', error);
@@ -208,7 +209,12 @@ export function LoginScreen() {
         if (profile) {
           setCurrentUser(profile);
         }
-        router.replace('/(tabs)/match');
+        // Check if profile is complete - redirect to profile setup if not
+        if (!profile || !isProfileComplete(profile)) {
+          router.replace('/profile-setup');
+        } else {
+          router.replace('/(tabs)/match');
+        }
       }
     } catch (error) {
       console.error('[Login] Sign in error:', error);

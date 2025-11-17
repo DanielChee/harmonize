@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import { COLORS } from '@constants';
 import { getSession } from '@services/supabase/auth';
+import { getUserProfile, isProfileComplete } from '@services/supabase/user';
 
 export default function Index() {
   const router = useRouter();
@@ -23,9 +24,19 @@ export default function Index() {
       const session = await getSession();
 
       if (session?.user) {
-        // User has active session, go to match screen
-        console.log('[Index] Session found, redirecting to match');
-        router.replace('/(tabs)/match');
+        // User has active session, check if profile is complete
+        console.log('[Index] Session found, checking profile completion');
+        const profile = await getUserProfile(session.user.id);
+        
+        if (!profile || !isProfileComplete(profile)) {
+          // Profile incomplete, redirect to profile setup
+          console.log('[Index] Profile incomplete, redirecting to profile setup');
+          router.replace('/profile-setup');
+        } else {
+          // Profile complete, go to match screen
+          console.log('[Index] Profile complete, redirecting to match');
+          router.replace('/(tabs)/match');
+        }
       } else {
         // No session, show login screen
         console.log('[Index] No session, redirecting to login');

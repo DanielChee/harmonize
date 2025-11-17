@@ -93,16 +93,30 @@ const extractTopGenres = (artists: ArtistObject[], limit: number = 5): string[] 
 
   // Count genre occurrences
   artists.forEach((artist) => {
-    artist.genres.forEach((genre) => {
-      genreCount.set(genre, (genreCount.get(genre) || 0) + 1);
-    });
+    if (artist.genres && artist.genres.length > 0) {
+      artist.genres.forEach((genre) => {
+        if (genre && genre.trim()) {
+          genreCount.set(genre.toLowerCase(), (genreCount.get(genre.toLowerCase()) || 0) + 1);
+        }
+      });
+    }
   });
 
   // Sort by count and return top genres
-  return Array.from(genreCount.entries())
+  // Normalize genre names (capitalize first letter of each word)
+  const normalizeGenre = (genre: string): string => {
+    return genre
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  const topGenres = Array.from(genreCount.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
-    .map(([genre]) => genre);
+    .map(([genre]) => normalizeGenre(genre));
+
+  return topGenres;
 };
 
 /**
@@ -154,18 +168,20 @@ const transformTrack = (track: TrackObject): SpotifyTrack => {
 export const fetchAllSpotifyData = async (): Promise<SpotifyData> => {
   try {
     // Fetch data in parallel
+    // Fetch more artists (20) to get better genre coverage for extracting top 5 genres
     const [userProfile, topArtistsResponse, topTracksResponse] = await Promise.all([
       getCurrentUserProfile(),
-      getTopArtists('medium_term', 5),
+      getTopArtists('medium_term', 20), // Increased from 5 to 20 for better genre coverage
       getTopTracks('medium_term', 5),
     ]);
 
     const topArtistsRaw = topArtistsResponse.items;
     const topTracksRaw = topTracksResponse.items;
 
-    // Transform to app types
-    const topArtists = topArtistsRaw.map(transformArtist);
+    // Transform to app types (only keep top 5 artists for display)
+    const topArtists = topArtistsRaw.slice(0, 5).map(transformArtist);
     const topTracks = topTracksRaw.map(transformTrack);
+    // Extract top 5 genres from all 20 artists for better coverage
     const topGenres = extractTopGenres(topArtistsRaw, 5);
     const totalListeningTime = calculateListeningHours(topTracksRaw);
 

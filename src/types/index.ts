@@ -17,9 +17,11 @@ export interface User {
   bio: string;
   pronouns: string;
   age: number;
-  city: string;
+  city: string; // City, State (e.g., "Atlanta, GA")
   university: string;
   academic_year?: string; // e.g., "Senior Undergrad", "Graduate Student", "Alumni"
+  academic_field?: string; // e.g., "Computer Science", "Business", etc.
+  mbti?: string; // MBTI personality type (e.g., "INTJ", "ENFP")
 
   // Media
   profile_picture_url: string;
@@ -28,6 +30,10 @@ export interface User {
   // Music
   featured_song_id?: string;
   hours_on_spotify?: number;
+  top_genres?: string[]; // Top music genres
+  top_artists?: string[]; // Top artists (artist names)
+  top_songs?: string[]; // Top songs (format: "Song Name - Artist Name")
+  sprint_5_variant?: 'variant_a' | 'variant_b'; // Variant A = Manual Input, Variant B = From Spotify
 
   // Preferences
   looking_for: 'friends' | 'dating' | 'both';
@@ -47,6 +53,12 @@ export interface User {
 
   // Concert Preferences
   concert_preferences?: string[];
+  concert_budget?: string; // e.g., "$0-50", "$50-100", "$100-200", "$200+"
+  concert_seating?: string; // e.g., "General Admission", "Reserved Seating", "VIP", "Any"
+  concert_transportation?: string; // e.g., "Drive", "Public Transit", "Rideshare", "Walking"
+  
+  // Profile Completion
+  profile_complete?: boolean; // Track if profile setup is complete
 
   // Activity Status
   is_active?: boolean;
