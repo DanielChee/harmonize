@@ -43,6 +43,28 @@ export async function updateUserProfile(
 }
 
 export async function getUserProfile(userId: string): Promise<User | null> {
+  // Check for test admin user
+  if (userId === "00000000-0000-0000-0000-000000000001") {
+    console.log("[User] Returning test admin profile");
+    return {
+      id: "00000000-0000-0000-0000-000000000001",
+      email: "test@admin.com",
+      username: "test_admin",
+      display_name: "Test Admin",
+      bio: "This is a test admin account for development purposes.",
+      pronouns: "they/them",
+      age: 25,
+      city: "Atlanta",
+      university: "Georgia Tech",
+      academic_year: "Graduate Student",
+      profile_picture_url: "https://via.placeholder.com/200",
+      looking_for: "both",
+      is_verified: true,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    } as User;
+  }
+
   try {
     const { data, error } = await supabase
       .from("profiles")

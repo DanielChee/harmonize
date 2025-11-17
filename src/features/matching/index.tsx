@@ -1,7 +1,7 @@
 import { COLORS } from "@constants";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useABTestStore } from "@store";
+import { useABTestStore, useUserStore } from "@store";
 import type { TestProfile } from "@types";
 import { responsiveSizes } from "@utils/responsive";
 import { TEST_PROFILES } from "@utils/testProfiles";
@@ -18,28 +18,29 @@ const STORAGE_KEY = "@harmonize_daily_likes";
 export default function MatchScreen() {
   const router = useRouter();
   const { variant, initialize, trackDecision, isLoading } = useABTestStore();
+  const { currentUser, session } = useUserStore();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [profileLoadTime, setProfileLoadTime] = useState<number>(0);
   const [isTesterMode, setIsTesterMode] = useState(true); // Default to tester mode (clean UI)
-  
+
 
   // Initialize A/B test on mount
   useEffect(() => {
     const initializeABTest = async () => {
       try {
-        // Get participant ID from storage
-        const participantId = await AsyncStorage.getItem('@harmonize_participant_id');
-        const testerMode = await AsyncStorage.getItem('@harmonize_is_tester_mode');
-
-        // If no participant ID, redirect to login
-        if (!participantId) {
-          console.log('[Match] No participant ID found, redirecting to login');
+        // Check if user is authenticated
+        if (!session || !currentUser) {
+          console.log('[Match] No session found, redirecting to login');
           router.replace('/login');
           return;
         }
 
+        // Use user ID as participant ID for A/B testing
+        const participantId = currentUser.id;
+        const testerMode = await AsyncStorage.getItem('@harmonize_is_tester_mode');
+
         setIsTesterMode(testerMode === 'true');
-        console.log('[Match] Initializing A/B test for participant:', participantId);
+        console.log('[Match] Initializing A/B test for user:', currentUser.username);
         console.log('[Match] Mode:', testerMode === 'true' ? 'TESTER' : 'DEV');
         await initialize(participantId);
         setProfileLoadTime(Date.now());
@@ -49,7 +50,7 @@ export default function MatchScreen() {
     };
 
     initializeABTest();
-  }, []);
+  }, [session, currentUser]);
 
   // Track load time when profile changes
   useEffect(() => {
@@ -157,12 +158,9 @@ export default function MatchScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Only clear login status, preserve test data
-              await AsyncStorage.multiRemove([
-                '@harmonize_participant_id',
-                '@harmonize_is_tester_mode',
-                '@harmonize_has_logged_in',
-              ]);
+              // Sign out from Supabase auth
+              const { signOut } = useUserStore.getState();
+              await signOut();
               console.log('[Match] User logged out');
               router.replace('/login');
             } catch (error) {

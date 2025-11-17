@@ -30,10 +30,11 @@ import {
 } from '@services/supabase/auth';
 import { useUserStore } from '@store';
 import { getUserProfile } from '@services/supabase/user';
+import type { Session } from '@supabase/supabase-js';
 
 export function LoginScreen() {
   const router = useRouter();
-  const { setCurrentUser, reset: resetUserStore } = useUserStore();
+  const { setCurrentUser, setSession, reset: resetUserStore } = useUserStore();
 
   // Form state
   const [isSignUp, setIsSignUp] = useState(false);
@@ -75,11 +76,13 @@ export function LoginScreen() {
 
   const checkExistingSession = async () => {
     try {
-      const session = await getSession();
-      if (session?.user) {
-        console.log('[Login] Existing session found:', session.user.email);
+      const existingSession = await getSession();
+      if (existingSession?.user) {
+        console.log('[Login] Existing session found:', existingSession.user.email);
+        // Store session in Zustand
+        setSession(existingSession);
         // Load user profile
-        const profile = await getUserProfile(session.user.id);
+        const profile = await getUserProfile(existingSession.user.id);
         if (profile) {
           setCurrentUser(profile);
         }
@@ -133,7 +136,7 @@ export function LoginScreen() {
 
     setIsLoading(true);
     try {
-      const { user, error } = await signUp({
+      const { user, session: newSession, error } = await signUp({
         email: email.trim(),
         password,
         username: username.trim(),
@@ -144,7 +147,20 @@ export function LoginScreen() {
         return;
       }
 
-      if (user) {
+      if (user && !newSession) {
+        // User created but no session - email confirmation might be required
+        // In our setup, this shouldn't happen, but handle it gracefully
+        Alert.alert(
+          'Account Created',
+          'Your account has been created. If email confirmation is required, please check your email then sign in.',
+          [{ text: 'OK', onPress: () => setIsSignUp(false) }]
+        );
+        return;
+      }
+
+      if (user && newSession) {
+        // Store session in Zustand
+        setSession(newSession as Session);
         // Load the created profile
         const profile = await getUserProfile(user.id);
         if (profile) {
@@ -174,7 +190,7 @@ export function LoginScreen() {
 
     setIsLoading(true);
     try {
-      const { user, error } = await signIn({
+      const { user, session: newSession, error } = await signIn({
         email: email.trim(),
         password,
       });
@@ -184,7 +200,9 @@ export function LoginScreen() {
         return;
       }
 
-      if (user) {
+      if (user && newSession) {
+        // Store session in Zustand
+        setSession(newSession as Session);
         // Load user profile
         const profile = await getUserProfile(user.id);
         if (profile) {

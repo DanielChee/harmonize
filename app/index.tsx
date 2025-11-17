@@ -6,8 +6,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '@constants';
+import { getSession } from '@services/supabase/auth';
 
 export default function Index() {
   const router = useRouter();
@@ -19,13 +19,16 @@ export default function Index() {
 
   const checkLoginStatus = async () => {
     try {
-      const hasLoggedIn = await AsyncStorage.getItem('@harmonize_has_logged_in');
+      // Check for Supabase session
+      const session = await getSession();
 
-      if (hasLoggedIn === 'true') {
-        // User is logged in, go to match screen
+      if (session?.user) {
+        // User has active session, go to match screen
+        console.log('[Index] Session found, redirecting to match');
         router.replace('/(tabs)/match');
       } else {
-        // User not logged in, show login screen
+        // No session, show login screen
+        console.log('[Index] No session, redirecting to login');
         router.replace('/login');
       }
     } catch (error) {

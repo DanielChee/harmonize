@@ -23,9 +23,16 @@ export interface SignInData {
   password: string;
 }
 
+// Test admin credentials for bypassing auth during development
+const TEST_ADMIN = {
+  email: "test@admin.com",
+  password: "test1234",
+};
+
 /**
  * Sign up a new user with email, password, and username
  * Creates auth user first, then profile is created separately
+ * Email verification is disabled - users can sign in immediately
  */
 export async function signUp({ email, password, username }: SignUpData): Promise<AuthResult> {
   // First check if username is available
@@ -42,7 +49,7 @@ export async function signUp({ email, password, username }: SignUpData): Promise
     };
   }
 
-  // Create the auth user
+  // Create the auth user with email confirmation disabled
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -50,6 +57,7 @@ export async function signUp({ email, password, username }: SignUpData): Promise
       data: {
         username: username, // Store username in user metadata
       },
+      emailRedirectTo: undefined, // No email redirect needed
     },
   });
 
@@ -58,7 +66,22 @@ export async function signUp({ email, password, username }: SignUpData): Promise
     return { user: null, session: null, error };
   }
 
-  // If signup successful, create the profile linked to auth user
+  // Check if email confirmation is required (session will be null if so)
+  if (data.user && !data.session) {
+    console.warn("[Auth] Email confirmation may be required. Check Supabase settings.");
+    // Still create the profile so user can sign in after confirmation
+    const profileError = await createUserProfile(data.user.id, email, username);
+    if (profileError) {
+      console.error("[Auth] Profile creation error:", profileError);
+    }
+
+    // Return success but note that session is null
+    // User will need to sign in after email confirmation if enabled
+    console.log("[Auth] Sign up successful (email confirmation may be pending):", data.user?.email);
+    return { user: data.user, session: data.session, error: null };
+  }
+
+  // If signup successful and session exists, create the profile
   if (data.user) {
     const profileError = await createUserProfile(data.user.id, email, username);
     if (profileError) {
@@ -74,8 +97,36 @@ export async function signUp({ email, password, username }: SignUpData): Promise
 
 /**
  * Sign in existing user with email and password
+ * Includes test admin bypass for development
  */
 export async function signIn({ email, password }: SignInData): Promise<AuthResult> {
+  // Check for test admin bypass
+  if (email === TEST_ADMIN.email && password === TEST_ADMIN.password) {
+    console.log("[Auth] Test admin bypass - creating mock session");
+
+    // Create a mock user and session for test admin
+    const mockUser = {
+      id: "00000000-0000-0000-0000-000000000001",
+      email: TEST_ADMIN.email,
+      app_metadata: {},
+      user_metadata: { username: "test_admin" },
+      aud: "authenticated",
+      created_at: new Date().toISOString(),
+    } as unknown as import("@supabase/supabase-js").User;
+
+    const mockSession = {
+      access_token: "test_admin_token",
+      refresh_token: "test_admin_refresh",
+      expires_in: 3600,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      token_type: "bearer",
+      user: mockUser,
+    } as unknown as import("@supabase/supabase-js").Session;
+
+    console.log("[Auth] Test admin sign in successful");
+    return { user: mockUser, session: mockSession, error: null };
+  }
+
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
