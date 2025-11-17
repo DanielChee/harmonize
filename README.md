@@ -31,7 +31,6 @@ npx expo start
 | Tab | Feature | Status |
 |-----|---------|--------|
 | **Match** | Swipe-based concert buddy discovery | ✅ Implemented |
-| **Concerts** | Browse upcoming events with filters | ✅ Mock data |
 | **Meet** | Chat with matched users | ✅ UI complete |
 | **Profile** | Spotify-powered music profiles | ✅ Fully functional |
 
