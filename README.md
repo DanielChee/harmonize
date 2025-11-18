@@ -119,17 +119,6 @@ FOR ALL USING (true) WITH CHECK (true);
 
 ---
 
-## 📚 Documentation
-
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Technical structure, file organization, design patterns
-- **[DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)** - Setup, workflow, common tasks, troubleshooting
-- **[TESTING_METHODOLOGY.md](TESTING_METHODOLOGY.md)** - Sprint 4 A/B testing design for peer review system
-- **[IMPLEMENTED_FEATURES.md](IMPLEMENTED_FEATURES.md)** - Complete feature list and status
-
-**For Developers**: Start with DEVELOPMENT_GUIDE.md for setup and workflow details.
-
----
-
 ## 🎯 Project Status
 
 **Current Sprint**: Sprint 4 (Peer Review System A/B Testing)
