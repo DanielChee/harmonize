@@ -3,16 +3,27 @@
  * Shows test profiles with visual badges instead of text reviews
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
-import { Card, LookingForSection, ConcertPreferencesGrid } from '@components';
+import { Card, ConcertPreferencesGrid, LookingForSection } from '@components';
+import { BORDER_RADIUS, COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import type { TestProfile } from '@types';
-import { COLORS, SPACING, BORDER_RADIUS, TYPOGRAPHY } from '@constants';
 import { responsiveSizes } from '@utils/responsive';
+import React from 'react';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import type { BudgetPreference, SeatingPreference, TransportPreference } from '@components/profile/ConcertPreferencesGrid';
 
 interface ProfileCardBProps {
   profile: TestProfile;
+  // Optional real data to override MOCK data
+  profilePictureUrl?: string;
+  topGenres?: string[];
+  topArtists?: string[]; // Array of artist names
+  topSongs?: string[]; // Array of "Song - Artist" strings
+  concertsAttended?: number;
+  concertBudget?: BudgetPreference;
+  concertSeating?: SeatingPreference;
+  concertTransport?: TransportPreference;
 }
 
 // Mock data for high profile elements
@@ -84,15 +95,55 @@ const ConcertHistoryItem: React.FC<{ concert: typeof MOCK_CONCERT_HISTORY[0] }> 
   );
 };
 
-export function ProfileCardB({ profile }: ProfileCardBProps) {
+export function ProfileCardB({ 
+  profile, 
+  profilePictureUrl,
+  topGenres,
+  topArtists,
+  topSongs,
+  concertsAttended,
+  concertBudget,
+  concertSeating,
+  concertTransport,
+}: ProfileCardBProps) {
   const { badgesTypeB } = profile;
+  
+  // Use real data if provided, otherwise use MOCK data
+  const spotifyGenres = topGenres && topGenres.length > 0 ? topGenres : MOCK_SPOTIFY_DATA.top_genres;
+  const spotifyArtists = topArtists && topArtists.length > 0 
+    ? topArtists.map((name, index) => ({ 
+        id: String(index + 1), 
+        name, 
+        image_url: `https://i.pravatar.cc/300?img=${51 + index}` 
+      }))
+    : MOCK_SPOTIFY_DATA.top_artists;
+  const spotifyTracks = topSongs && topSongs.length > 0
+    ? topSongs.map((songString, index) => {
+        const [name, ...artistParts] = songString.split(' - ');
+        const artist = artistParts.join(' - ') || 'Unknown Artist';
+        return {
+          id: String(index + 1),
+          name: name || songString,
+          artist,
+          image_url: `https://i.pravatar.cc/300?img=${54 + index}`,
+          duration_ms: 200000, // Default duration
+        };
+      })
+    : MOCK_SPOTIFY_DATA.top_tracks;
+  const featuredTrack = spotifyTracks[0] || MOCK_SPOTIFY_DATA.featured_track;
+  const concertsCount = concertsAttended !== undefined ? concertsAttended : profile.concertsAttended;
+  const isUniversityVerified = profile.universityVerified && profile.university && profile.university !== 'Not specified';
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header with Mutual Friends */}
       <View style={styles.header}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{profile.name[0]}</Text>
+          {profilePictureUrl ? (
+            <Image source={{ uri: profilePictureUrl }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{profile.name[0]}</Text>
+          )}
         </View>
         <View style={styles.headerInfo}>
           <Text style={styles.name}>{profile.name}</Text>
@@ -152,14 +203,14 @@ export function ProfileCardB({ profile }: ProfileCardBProps) {
             <Text style={styles.infoText}>{profile.university}</Text>
           </Card>
           <Card icon={<MaterialIcons name="confirmation-number" size={20} color="rgba(0,0,0,0.8)" />}>
-            <Text style={styles.infoText}>{profile.concertsAttended} concerts</Text>
+            <Text style={styles.infoText}>{concertsCount} concerts</Text>
           </Card>
         </View>
       </Card>
 
       {/* Featured Song */}
       <Card style={styles.section}>
-        <FeaturedSong track={MOCK_SPOTIFY_DATA.featured_track} />
+        <FeaturedSong track={featuredTrack} />
       </Card>
 
       {/* Music Stats */}
@@ -174,7 +225,7 @@ export function ProfileCardB({ profile }: ProfileCardBProps) {
         <View style={styles.genresSection}>
           <Text style={styles.subsectionTitle}>Top Genres</Text>
           <View style={styles.genresList}>
-            {MOCK_SPOTIFY_DATA.top_genres.map((genre, index) => (
+            {spotifyGenres.map((genre, index) => (
               <View key={`${genre}-${index}`} style={styles.genreBorderedTag}>
                 <Text style={styles.genreTagText}>{genre}</Text>
               </View>
@@ -187,7 +238,7 @@ export function ProfileCardB({ profile }: ProfileCardBProps) {
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Top Artists</Text>
         <View style={styles.artistsList}>
-          {MOCK_SPOTIFY_DATA.top_artists.map((artist) => (
+          {spotifyArtists.map((artist) => (
             <View key={artist.id} style={styles.artistItem}>
               <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
               <Text style={styles.artistName} numberOfLines={2}>{artist.name}</Text>
@@ -199,7 +250,7 @@ export function ProfileCardB({ profile }: ProfileCardBProps) {
       {/* Top Tracks */}
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Top Tracks</Text>
-        {MOCK_SPOTIFY_DATA.top_tracks.map((track, index) => (
+        {spotifyTracks.map((track, index) => (
           <View key={track.id} style={styles.trackItem}>
             <Text style={styles.trackNumber}>{index + 1}</Text>
             <Image source={{ uri: track.image_url }} style={styles.trackImage} />
@@ -236,15 +287,23 @@ export function ProfileCardB({ profile }: ProfileCardBProps) {
             <View style={styles.vouchIcon}>
               <MaterialIcons name="confirmation-number" size={32} color={COLORS.primary} />
             </View>
-            <Text style={styles.vouchCount}>{profile.concertsAttended}</Text>
+            <Text style={styles.vouchCount}>{concertsCount}</Text>
             <Text style={styles.vouchLabel}>Concerts</Text>
           </View>
           <View style={styles.vouchItem}>
             <View style={styles.vouchIcon}>
-              <MaterialIcons name="verified-user" size={32} color={COLORS.success} />
+              {isUniversityVerified ? (
+                <MaterialIcons name="verified-user" size={32} color={COLORS.success} />
+              ) : (
+                <MaterialIcons name="cancel" size={32} color={COLORS.text.secondary} />
+              )}
             </View>
-            <Text style={styles.vouchCount}>✓</Text>
-            <Text style={styles.vouchLabel}>Verified</Text>
+            <Text style={styles.vouchCount}>
+              {isUniversityVerified ? '✓' : ':('}
+            </Text>
+            <Text style={styles.vouchLabel}>
+              {isUniversityVerified ? 'Verified' : 'Not verified'}
+            </Text>
           </View>
           <View style={styles.vouchItem}>
             <View style={styles.vouchIcon}>
@@ -324,9 +383,9 @@ export function ProfileCardB({ profile }: ProfileCardBProps) {
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>Concert Preferences</Text>
         <ConcertPreferencesGrid
-          budget="budget-friendly"
-          seating="seated"
-          transport="can-drive"
+          budget={concertBudget || "budget-friendly"}
+          seating={concertSeating || "any"}
+          transport={concertTransport || "any"}
           matching="flexible"
         />
       </Card>
@@ -361,6 +420,11 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: COLORS.text.primary,
+  },
+  avatarImage: {
+    width: responsiveSizes.avatar.large,
+    height: responsiveSizes.avatar.large,
+    borderRadius: responsiveSizes.avatar.large / 2,
   },
   headerInfo: {
     flex: 1,

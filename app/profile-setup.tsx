@@ -3,22 +3,23 @@
  * Multi-step onboarding flow for new users to complete their profile
  */
 
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ScrollView, View, Text, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, TouchableOpacity, Alert } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
-import { useUserStore } from '@store';
-import { getSession } from '@services/supabase/auth';
-import { getUserProfile, updateUserProfile } from '@services/supabase/user';
 import { Button } from '@components/common/Button';
+import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
+import { getSession } from '@services/supabase/auth';
+import { getUserProfile } from '@services/supabase/user';
+import { useUserStore } from '@store';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Import step components
 import { BasicInfoStep } from '@features/profile-setup/BasicInfoStep';
+import { ConcertPreferencesStep } from '@features/profile-setup/ConcertPreferencesStep';
 import { MusicTasteStep } from '@features/profile-setup/MusicTasteStep';
 import { ProfilePictureStep } from '@features/profile-setup/ProfilePictureStep';
-import { ConcertPreferencesStep } from '@features/profile-setup/ConcertPreferencesStep';
+import { ProfilePreviewStep } from '@features/profile-setup/ProfilePreviewStep';
 import { UniversityVerificationStep } from '@features/profile-setup/UniversityVerificationStep';
 
 type SetupStep = 1 | 2 | 3 | 4 | 5;
@@ -30,6 +31,13 @@ export default function ProfileSetupScreen() {
   const [currentStep, setCurrentStep] = useState<SetupStep>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  
+  // Track timing for profile creation
+  const profileCreationStartTime = useRef<number | null>(null);
+  
+  // Track last field that was updated
+  const lastFieldUpdated = useRef<string | null>(null);
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -97,9 +105,9 @@ export default function ProfileSetupScreen() {
           concert_budget: profile.concert_budget || '',
           concert_seating: profile.concert_seating || '',
           concert_transportation: profile.concert_transportation || '',
-          university: profile.university || '',
-          academic_field: profile.academic_field || '',
-          academic_year: profile.academic_year || '',
+          university: '',
+          academic_field: '',
+          academic_year: '',
           student_email: '',
         });
       }
@@ -111,7 +119,27 @@ export default function ProfileSetupScreen() {
     }
   };
 
+  // Start timing on first field interaction
+  const startTimingIfNeeded = () => {
+    if (profileCreationStartTime.current === null) {
+      profileCreationStartTime.current = Date.now();
+      console.log('[ProfileSetup] Timing started - profile creation timer began');
+    }
+  };
+
   const updateFormData = (updates: Partial<typeof formData>) => {
+    // Start timing on first field interaction
+    startTimingIfNeeded();
+    
+    // Track the last field that was updated
+    // Filter out metadata fields like sprint_5_variant that are updated alongside other fields
+    const fieldKeys = Object.keys(updates).filter(key => key !== 'sprint_5_variant');
+    if (fieldKeys.length > 0) {
+      // Get the first key (primary field being updated)
+      // When multiple fields update, the first is usually the main one
+      lastFieldUpdated.current = fieldKeys[0];
+    }
+    
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
@@ -158,6 +186,95 @@ export default function ProfileSetupScreen() {
     }
   };
 
+  // Helper function to count filled fields
+  const countFilledFields = (): number => {
+    let count = 0;
+    
+    // Step 1: Basic Info
+    if (formData.display_name.trim()) count++;
+    if (formData.city.trim()) count++;
+    if (formData.age > 0) count++;
+    if (formData.mbti.trim()) count++;
+    if (formData.pronouns.trim()) count++;
+    if (formData.bio.trim()) count++;
+    
+    // Step 2: Music Taste
+    if (formData.top_genres.length > 0) count++;
+    if (formData.top_artists.length > 0) count++;
+    if (formData.top_songs.length > 0) count++;
+    
+    // Step 3: Profile Picture
+    if (formData.profile_picture_url.trim()) count++;
+    
+    // Step 4: Concert Preferences
+    if (formData.concert_budget.trim()) count++;
+    if (formData.concert_seating.trim()) count++;
+    if (formData.concert_transportation.trim()) count++;
+    
+    // Step 5: University (optional)
+    if (formData.university.trim()) count++;
+    if (formData.academic_field.trim()) count++;
+    if (formData.academic_year.trim()) count++;
+    if (formData.student_email.trim()) count++;
+    
+    return count;
+  };
+
+  // Helper function to get human-readable field name
+  const getFieldName = (fieldKey: string): string => {
+    const fieldNames: Record<string, string> = {
+      display_name: 'Display Name',
+      city: 'City',
+      age: 'Age',
+      mbti: 'MBTI Type',
+      pronouns: 'Pronouns',
+      bio: 'Bio',
+      top_genres: 'Top Genres',
+      top_artists: 'Top Artists',
+      top_songs: 'Top Songs',
+      profile_picture_url: 'Profile Picture',
+      concert_budget: 'Concert Budget',
+      concert_seating: 'Concert Seating',
+      concert_transportation: 'Concert Transportation',
+      university: 'University',
+      academic_field: 'Academic Field',
+      academic_year: 'Academic Year',
+      student_email: 'Student Email',
+    };
+    return fieldNames[fieldKey] || fieldKey;
+  };
+
+  // Helper function to log exit information
+  const logExitInfo = () => {
+    const stepTitle = getStepTitle();
+    const filledFieldsCount = countFilledFields();
+    const lastField = lastFieldUpdated.current 
+      ? getFieldName(lastFieldUpdated.current) 
+      : 'None';
+    
+    // Calculate time spent if timing was started
+    let timeSpentMessage = 'N/A (no field interactions)';
+    if (profileCreationStartTime.current !== null) {
+      const endTime = Date.now();
+      const elapsedTime = endTime - profileCreationStartTime.current;
+      const elapsedSeconds = (elapsedTime / 1000).toFixed(2);
+      const elapsedMinutes = Math.floor(elapsedTime / 60000);
+      const remainingSeconds = ((elapsedTime % 60000) / 1000).toFixed(2);
+      
+      if (elapsedMinutes > 0) {
+        timeSpentMessage = `${elapsedMinutes} minute(s) and ${remainingSeconds} seconds (${elapsedTime}ms total)`;
+      } else {
+        timeSpentMessage = `${elapsedSeconds} seconds (${elapsedTime}ms total)`;
+      }
+    }
+    
+    console.log('[ProfileSetup] User exited profile setup:');
+    console.log(`  - Step quit at: Step ${currentStep} (${stepTitle})`);
+    console.log(`  - Last field filled: ${lastField}`);
+    console.log(`  - Total fields filled: ${filledFieldsCount}`);
+    console.log(`  - Time spent: ${timeSpentMessage}`);
+  };
+
   const handleExit = () => {
     // Check if user has made any changes
     const hasChanges = 
@@ -191,6 +308,9 @@ export default function ProfileSetupScreen() {
             text: 'Exit',
             style: 'destructive',
             onPress: () => {
+              // Log exit information after user confirms
+              logExitInfo();
+              
               // Navigate back to profile page
               if (currentUser?.profile_complete) {
                 router.replace('/(tabs)/profile');
@@ -203,7 +323,9 @@ export default function ProfileSetupScreen() {
         ]
       );
     } else {
-      // No changes, just exit
+      // No changes, just exit - log and navigate
+      logExitInfo();
+      
       if (currentUser?.profile_complete) {
         router.replace('/(tabs)/profile');
       } else {
@@ -218,45 +340,92 @@ export default function ProfileSetupScreen() {
       return;
     }
 
+    // Calculate and log the time spent on profile creation
+    if (profileCreationStartTime.current !== null) {
+      const endTime = Date.now();
+      const elapsedTime = endTime - profileCreationStartTime.current;
+      const elapsedSeconds = (elapsedTime / 1000).toFixed(2);
+      const elapsedMinutes = Math.floor(elapsedTime / 60000);
+      const remainingSeconds = ((elapsedTime % 60000) / 1000).toFixed(2);
+      
+      if (elapsedMinutes > 0) {
+        console.log(`[ProfileSetup] Time spent on profile creation: ${elapsedMinutes} minute(s) and ${remainingSeconds} seconds (${elapsedTime}ms total)`);
+      } else {
+        console.log(`[ProfileSetup] Time spent on profile creation: ${elapsedSeconds} seconds (${elapsedTime}ms total)`);
+      }
+    }
+    
+    // Log number of fields filled
+    const filledFieldsCount = countFilledFields();
+    console.log(`[ProfileSetup] Total fields filled: ${filledFieldsCount}`);
+
     setIsSaving(true);
     try {
+      // Clean up data - convert empty strings to undefined for optional fields only
+      const cleanOptionalValue = (value: string | undefined | null): string | undefined => {
+        if (value === null || value === undefined) return undefined;
+        if (typeof value === 'string' && value.trim() === '') return undefined;
+        return value;
+      };
+
       const updates = {
-        display_name: formData.display_name,
-        city: formData.city,
+        display_name: formData.display_name.trim(),
+        city: formData.city.trim(),
         age: formData.age,
-        mbti: formData.mbti || undefined,
-        pronouns: formData.pronouns,
-        bio: formData.bio,
+        mbti: cleanOptionalValue(formData.mbti),
+        pronouns: formData.pronouns.trim(),
+        bio: formData.bio.trim(),
         top_genres: formData.top_genres.length > 0 ? formData.top_genres : undefined,
         top_artists: formData.top_artists.length > 0 ? formData.top_artists : undefined,
         top_songs: formData.top_songs.length > 0 ? formData.top_songs : undefined,
         sprint_5_variant: formData.sprint_5_variant,
-        profile_picture_url: formData.profile_picture_url,
-        concert_budget: formData.concert_budget,
-        concert_seating: formData.concert_seating,
-        concert_transportation: formData.concert_transportation,
-        university: formData.university || undefined,
-        academic_field: formData.academic_field || undefined,
-        academic_year: formData.academic_year || undefined,
+        profile_picture_url: cleanOptionalValue(formData.profile_picture_url),
+        concert_budget: cleanOptionalValue(formData.concert_budget),
+        concert_seating: cleanOptionalValue(formData.concert_seating),
+        concert_transportation: cleanOptionalValue(formData.concert_transportation),
+        university: cleanOptionalValue(formData.university),
+        academic_field: cleanOptionalValue(formData.academic_field),
+        academic_year: cleanOptionalValue(formData.academic_year),
         profile_complete: true,
       };
 
-      await updateUserProfile(session.user.id, updates);
+      // TODO: Uncomment when ready to save to database
+      // await updateUserProfile(session.user.id, updates);
       
       // Update local state
-      const updatedProfile = await getUserProfile(session.user.id);
-      if (updatedProfile) {
-        setCurrentUser(updatedProfile);
-      }
+      // const updatedProfile = await getUserProfile(session.user.id);
+      // if (updatedProfile) {
+      //   setCurrentUser(updatedProfile);
+      // }
 
-      // Navigate to main app
-      router.replace('/(tabs)/match');
+      // Show preview instead of navigating immediately
+      console.log('[ProfileSetup] Skipping database save and showing preview directly. To save to database, uncomment the updateUserProfile call and comment out the setShowPreview line.');
+      setIsSaving(false);
+      setShowPreview(true);
     } catch (error) {
       console.error('[ProfileSetup] Error saving profile:', error);
-      alert('Failed to save profile. Please try again.');
-    } finally {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[ProfileSetup] Error details:', {
+        message: errorMessage,
+        error,
+      });
+      alert(`Failed to save profile: ${errorMessage}. Please try again.`);
       setIsSaving(false);
     }
+  };
+
+  const handleSatisfied = () => {
+    console.log('[ProfileSetup] User satisfied with profile preview');
+    // Navigate to main app
+    router.replace('/(tabs)/match');
+  };
+
+  const handleNotSatisfied = () => {
+    console.log('[ProfileSetup] User not satisfied with profile preview');
+    // Navigate back to profile setup to allow editing
+    // Reset to first step or let them navigate
+    setShowPreview(false);
+    setCurrentStep(1);
   };
 
   const getStepTitle = () => {
@@ -281,6 +450,17 @@ export default function ProfileSetupScreen() {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
+    );
+  }
+
+  // Show preview after completion
+  if (showPreview) {
+    return (
+      <ProfilePreviewStep
+        formData={formData}
+        onSatisfied={handleSatisfied}
+        onNotSatisfied={handleNotSatisfied}
+      />
     );
   }
 
@@ -330,6 +510,7 @@ export default function ProfileSetupScreen() {
           <BasicInfoStep
             formData={formData}
             updateFormData={updateFormData}
+            onFieldInteraction={startTimingIfNeeded}
           />
         )}
         {currentStep === 2 && (

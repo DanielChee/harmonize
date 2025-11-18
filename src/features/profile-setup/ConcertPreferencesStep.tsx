@@ -3,9 +3,9 @@
  * Collects budget, seating preference, and transportation preference
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface ConcertPreferencesStepProps {
   formData: {
@@ -16,27 +16,28 @@ interface ConcertPreferencesStepProps {
   updateFormData: (updates: Partial<ConcertPreferencesStepProps['formData']>) => void;
 }
 
+// Budget options - values match ConcertPreferencesGrid types
 const BUDGET_OPTIONS = [
-  '$0-50',
-  '$50-100',
-  '$100-200',
-  '$200-300',
-  '$300+',
+  { value: 'budget-friendly', label: '$0-100 (Budget-friendly)' },
+  { value: 'mid-range', label: '$100-300 (Mid-range)' },
+  { value: 'premium', label: '$300+ (Premium)' },
+  { value: 'any', label: 'Any budget' },
 ];
 
+// Seating options - values match ConcertPreferencesGrid types
 const SEATING_OPTIONS = [
-  'General Admission',
-  'Reserved Seating',
-  'VIP',
-  'Any',
+  { value: 'standing', label: 'Standing' },
+  { value: 'seated', label: 'Seated' },
+  { value: 'pit', label: 'Pit' },
+  { value: 'any', label: 'Any seating' },
 ];
 
+// Transportation options - values match ConcertPreferencesGrid types
 const TRANSPORTATION_OPTIONS = [
-  'Drive',
-  'Public Transit',
-  'Rideshare (Uber/Lyft)',
-  'Walking',
-  'Other',
+  { value: 'can-drive', label: 'I can drive' },
+  { value: 'public-transport', label: 'Public Transit' },
+  { value: 'need-ride', label: 'Need a ride / Rideshare' },
+  { value: 'any', label: 'Flexible' },
 ];
 
 export const ConcertPreferencesStep: React.FC<ConcertPreferencesStepProps> = ({
@@ -56,10 +57,10 @@ export const ConcertPreferencesStep: React.FC<ConcertPreferencesStepProps> = ({
         <View style={styles.optionsList}>
           {BUDGET_OPTIONS.map((option) => (
             <OptionButton
-              key={option}
-              label={option}
-              selected={formData.concert_budget === option}
-              onPress={() => updateFormData({ concert_budget: option })}
+              key={option.value}
+              label={option.label}
+              selected={formData.concert_budget === option.value}
+              onPress={() => updateFormData({ concert_budget: option.value })}
             />
           ))}
         </View>
@@ -72,10 +73,10 @@ export const ConcertPreferencesStep: React.FC<ConcertPreferencesStepProps> = ({
         <View style={styles.optionsList}>
           {SEATING_OPTIONS.map((option) => (
             <OptionButton
-              key={option}
-              label={option}
-              selected={formData.concert_seating === option}
-              onPress={() => updateFormData({ concert_seating: option })}
+              key={option.value}
+              label={option.label}
+              selected={formData.concert_seating === option.value}
+              onPress={() => updateFormData({ concert_seating: option.value })}
             />
           ))}
         </View>
@@ -88,10 +89,10 @@ export const ConcertPreferencesStep: React.FC<ConcertPreferencesStepProps> = ({
         <View style={styles.optionsList}>
           {TRANSPORTATION_OPTIONS.map((option) => (
             <OptionButton
-              key={option}
-              label={option}
-              selected={formData.concert_transportation === option}
-              onPress={() => updateFormData({ concert_transportation: option })}
+              key={option.value}
+              label={option.label}
+              selected={formData.concert_transportation === option.value}
+              onPress={() => updateFormData({ concert_transportation: option.value })}
             />
           ))}
         </View>

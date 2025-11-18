@@ -3,12 +3,12 @@
  * Collects name, location (city), age, MBTI, pronouns, and bio
  */
 
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { Input } from '@components/common/Input';
 import { SearchableDropdown } from '@components/common/SearchableDropdown';
-import { searchCities, MAJOR_CITIES } from '@utils/locations';
+import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
+import { MAJOR_CITIES, searchCities } from '@utils/locations';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface BasicInfoStepProps {
   formData: {
@@ -20,6 +20,7 @@ interface BasicInfoStepProps {
     bio: string;
   };
   updateFormData: (updates: Partial<BasicInfoStepProps['formData']>) => void;
+  onFieldInteraction?: () => void;
 }
 
 const MBTI_OPTIONS = [
@@ -35,7 +36,7 @@ const PRONOUNS_OPTIONS = [
   'they/them',
 ];
 
-export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ formData, updateFormData }) => {
+export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ formData, updateFormData, onFieldInteraction }) => {
   // City search handler - uses the searchCities utility function
   const handleCitySearch = async (query: string): Promise<string[]> => {
     return await searchCities(query);
@@ -53,6 +54,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ formData, updateFo
         placeholder="Enter your name"
         value={formData.display_name}
         onChangeText={(text) => updateFormData({ display_name: text })}
+        onFocus={onFieldInteraction}
         autoCapitalize="words"
         maxLength={50}
       />
@@ -70,6 +72,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ formData, updateFo
           });
         }}
         onSearchChange={handleCitySearch}
+        onInteraction={onFieldInteraction}
         searchPlaceholder="Search cities..."
       />
 
@@ -86,6 +89,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ formData, updateFo
             updateFormData({ age: 0 });
           }
         }}
+        onFocus={onFieldInteraction}
         keyboardType="numeric"
         maxLength={3}
       />
@@ -126,6 +130,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ formData, updateFo
         placeholder="Tell us a little about yourself..."
         value={formData.bio}
         onChangeText={(text) => updateFormData({ bio: text })}
+        onFocus={onFieldInteraction}
         multiline
         numberOfLines={4}
         maxLength={200}

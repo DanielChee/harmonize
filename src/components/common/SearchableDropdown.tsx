@@ -3,25 +3,25 @@
  * A searchable dropdown input for selecting from a list of options
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
+import { MaterialIcons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
+  Animated,
+  Dimensions,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  PanResponder,
+  Platform,
+  Pressable,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  FlatList,
-  Modal,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  Keyboard,
-  Dimensions,
-  PanResponder,
-  Animated,
+  View,
 } from 'react-native';
-import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
-import { MaterialIcons } from '@expo/vector-icons';
 
 interface SearchableDropdownProps {
   label?: string;
@@ -33,6 +33,7 @@ interface SearchableDropdownProps {
   disabled?: boolean;
   searchPlaceholder?: string;
   onSearchChange?: (query: string) => Promise<string[]> | void;
+  onInteraction?: () => void;
 }
 
 export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
@@ -45,6 +46,7 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   disabled = false,
   searchPlaceholder = 'Search...',
   onSearchChange,
+  onInteraction,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -170,6 +172,7 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
 
   const handleOpen = () => {
     if (!disabled) {
+      onInteraction?.();
       setIsOpen(true);
       setSearchQuery('');
     }

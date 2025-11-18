@@ -1,8 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { supabase } from "./supabase";
+import type { User } from "@types";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
-import type { User } from "@types";
+import { supabase } from "./supabase";
 
 export async function getOrCreateUser() {
   let userId = await AsyncStorage.getItem("userId");

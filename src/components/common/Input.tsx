@@ -1,8 +1,8 @@
 // Reusable input component
 
+import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet } from 'react-native';
-import { COLORS, TYPOGRAPHY, SPACING } from '@constants';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 interface InputProps {
   label?: string;
@@ -20,6 +20,7 @@ interface InputProps {
   autoCorrect?: boolean;
   returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send';
   onSubmitEditing?: () => void;
+  onFocus?: () => void;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
 }
@@ -40,10 +41,16 @@ export const Input: React.FC<InputProps> = ({
   autoCorrect = true,
   returnKeyType = 'done',
   onSubmitEditing,
+  onFocus,
   leftIcon,
   rightIcon,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    onFocus?.();
+  };
 
   return (
     <View style={styles.container}>
@@ -75,7 +82,7 @@ export const Input: React.FC<InputProps> = ({
           autoCorrect={autoCorrect}
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
-          onFocus={() => setIsFocused(true)}
+          onFocus={handleFocus}
           onBlur={() => setIsFocused(false)}
           placeholderTextColor={COLORS.text.light}
         />
