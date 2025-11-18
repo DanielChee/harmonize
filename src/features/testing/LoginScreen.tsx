@@ -3,7 +3,7 @@
  * Handles user signup and signin with email/password and username
  */
 
-import { BORDER_RADIUS, COLORS, SPACING } from '@constants';
+import { BORDER_RADIUS, COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -449,18 +449,18 @@ const styles = StyleSheet.create({
     marginBottom: SPACING['2xl'],
   },
   title: {
-    fontSize: 40,
-    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY.sizes['5xl'],
+    fontWeight: TYPOGRAPHY.weights.bold,
     color: COLORS.primary,
     marginBottom: SPACING.xs,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: TYPOGRAPHY.sizes.lg,
     color: COLORS.text.secondary,
-    fontWeight: '500',
+    fontWeight: TYPOGRAPHY.weights.medium,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.sizes.base,
     color: COLORS.text.secondary,
     marginTop: SPACING.md,
   },
@@ -468,8 +468,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sizes.base,
+    fontWeight: TYPOGRAPHY.weights.semibold,
     color: COLORS.text.primary,
     marginBottom: SPACING.sm,
   },
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
-    fontSize: 16,
+    fontSize: TYPOGRAPHY.sizes.base,
     color: COLORS.text.primary,
   },
   inputWithStatus: {
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   },
   statusIcon: {
     marginLeft: SPACING.sm,
-    fontSize: 20,
+    fontSize: TYPOGRAPHY.sizes.xl,
   },
   statusAvailable: {
     color: COLORS.success,
@@ -500,12 +500,12 @@ const styles = StyleSheet.create({
     color: COLORS.error,
   },
   hint: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.sizes.xs,
     color: COLORS.text.secondary,
     marginTop: SPACING.xs,
   },
   errorHint: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.sizes.xs,
     color: COLORS.error,
     marginTop: SPACING.xs,
   },
@@ -520,8 +520,8 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   primaryButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sizes.lg,
+    fontWeight: TYPOGRAPHY.weights.semibold,
     color: COLORS.text.inverse,
   },
   toggleButton: {
@@ -530,9 +530,9 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
   },
   toggleButtonText: {
-    fontSize: 15,
+    fontSize: TYPOGRAPHY.sizes.sm,
     color: COLORS.primary,
-    fontWeight: '500',
+    fontWeight: TYPOGRAPHY.weights.medium,
   },
   signOutButton: {
     backgroundColor: 'transparent',
@@ -544,8 +544,8 @@ const styles = StyleSheet.create({
     marginTop: SPACING.lg,
   },
   signOutButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.semibold,
     color: COLORS.error,
   },
   infoSection: {
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   infoText: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.sizes.xs,
     color: COLORS.text.secondary,
     textAlign: 'center',
   },

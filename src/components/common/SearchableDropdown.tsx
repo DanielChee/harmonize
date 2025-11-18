@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.5,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: COLORS.surface,
   },
   valueText: {
     flex: 1,
