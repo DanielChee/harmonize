@@ -1,31 +1,22 @@
 /**
- * DEVELOPMENT DATA - A/B Testing Review System
+ * DEVELOPMENT DATA - Harmonize Review System
  *
  * Mock Meets & Review System Data
  *
- * Contains 7 test users for Sprint 4 A/B testing of the review system.
- * Used in the Meet/DMs tab to demonstrate:
- * - Review Type A: 1-5 star rating + comment
- * - Review Type B: 3-question survey (5-star each) + "Did you harmonize?" toggle
+ * Contains 7 test users using ONLY Review Type B (final production version):
+ * - 3-question survey (5-star each)
+ * - "Did you harmonize?" yes/no toggle
  *
- * Test profiles cover: upcoming matches, past unreviewed, and past reviewed states.
+ * No more Variant A support.
  */
 
-export interface ReviewTypeA {
-  type: 'A';
-  rating: number;
-  comment: string;
-}
-
-export interface ReviewTypeB {
+export interface Review {
   type: 'B';
-  q1: number;
-  q2: number;
-  q3: number;
-  wouldMeetAgain: boolean;
+  q1: number; // Enjoyment
+  q2: number; // Reliability
+  q3: number; // Communication
+  wouldMeetAgain: boolean; // Harmonize (Yes/No)
 }
-
-export type Review = ReviewTypeA | ReviewTypeB;
 
 export interface MockUser {
   id: string;
@@ -36,6 +27,9 @@ export interface MockUser {
   phoneNumber: string;
   concertDate: string; // ISO format
   review: Review | null;
+  matchRowId?: string;
+
+  source?: 'mock' | 'match';
 }
 
 export const MOCK_USERS: MockUser[] = [
@@ -49,6 +43,7 @@ export const MOCK_USERS: MockUser[] = [
     phoneNumber: '404-555-2391',
     concertDate: '2025-12-15',
     review: null,
+    source: 'mock',
   },
   {
     id: 'user-2',
@@ -59,6 +54,7 @@ export const MOCK_USERS: MockUser[] = [
     phoneNumber: '404-555-8143',
     concertDate: '2025-11-09',
     review: null,
+    source: 'mock',
   },
   {
     id: 'user-3',
@@ -69,6 +65,7 @@ export const MOCK_USERS: MockUser[] = [
     phoneNumber: '404-555-6661',
     concertDate: '2025-12-20',
     review: null,
+    source: 'mock',
   },
 
   // PAST (unreviewed)
@@ -81,6 +78,7 @@ export const MOCK_USERS: MockUser[] = [
     phoneNumber: '404-555-0192',
     concertDate: '2025-09-10',
     review: null,
+    source: 'mock',
   },
   {
     id: 'user-5',
@@ -91,9 +89,10 @@ export const MOCK_USERS: MockUser[] = [
     phoneNumber: '404-555-4710',
     concertDate: '2025-08-10',
     review: null,
+    source: 'mock',
   },
 
-  // PAST (reviewed – Version A)
+  // PAST (reviewed – converted from Version A → Version B)
   {
     id: 'user-6',
     name: 'Alex',
@@ -102,7 +101,14 @@ export const MOCK_USERS: MockUser[] = [
     city: 'Atlanta, GA',
     phoneNumber: '404-555-9021',
     concertDate: '2025-07-20',
-    review: { type: 'A', rating: 5, comment: 'Super friendly and chill!' },
+    review: {
+      type: 'B',
+      q1: 5,
+      q2: 5,
+      q3: 5,
+      wouldMeetAgain: true,
+    },
+    source: 'mock',
   },
 
   // PAST (reviewed – Version B)
@@ -114,6 +120,13 @@ export const MOCK_USERS: MockUser[] = [
     city: 'Atlanta, GA',
     phoneNumber: '404-555-7281',
     concertDate: '2025-06-14',
-    review: { type: 'B', q1: 4, q2: 5, q3: 4, wouldMeetAgain: true },
+    review: {
+      type: 'B',
+      q1: 4,
+      q2: 5,
+      q3: 4,
+      wouldMeetAgain: true,
+    },
+    source: 'mock',
   },
 ];

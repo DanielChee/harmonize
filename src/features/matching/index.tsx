@@ -1,182 +1,239 @@
+// src/features/matching/index.tsx
 import { COLORS } from "@constants";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { deleteAllMatchesForUser, upsertMatchForTestProfile } from '@services/supabase/matches';
 import { useABTestStore, useUserStore } from "@store";
 import type { TestProfile } from "@types";
 import { responsiveSizes } from "@utils/responsive";
 import { TEST_PROFILES } from "@utils/testProfiles";
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  Easing,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
 import { ABTestProfileCard } from "../testing/ABTestProfileCard";
 import styles from "./styles";
 
 const MAX_LIKES_PER_DAY = 5;
 const STORAGE_KEY = "@harmonize_daily_likes";
 
-
 export default function MatchScreen() {
+
+  // ------------------------------------------------------------
+  // HOOKS (Fixed order, never conditional)
+  // ------------------------------------------------------------
   const router = useRouter();
   const { variant, initialize, trackDecision, isLoading } = useABTestStore();
   const { currentUser, session } = useUserStore();
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [profileLoadTime, setProfileLoadTime] = useState<number>(0);
-  const [isTesterMode, setIsTesterMode] = useState(true); // Default to tester mode (clean UI)
+  const [isTesterMode, setIsTesterMode] = useState(true);
 
+  const screenWidth = Dimensions.get("window").width;
+  const slideAnim = useMemo(() => new Animated.Value(0), []);
 
-  // Initialize A/B test on mount
+  // ------------------------------------------------------------
+  // EFFECT: Initialization (one time per login session)
+  // ------------------------------------------------------------
   useEffect(() => {
-    const initializeABTest = async () => {
-      try {
-        // Check if user is authenticated
-        if (!session || !currentUser) {
-          console.log('[Match] No session found, redirecting to login');
-          router.replace('/login');
-          return;
-        }
+    let cancelled = false;
 
-        // Use user ID as participant ID for A/B testing
-        const participantId = currentUser.id;
-        const testerMode = await AsyncStorage.getItem('@harmonize_is_tester_mode');
-
-        setIsTesterMode(testerMode === 'true');
-        console.log('[Match] Initializing A/B test for user:', currentUser.username);
-        console.log('[Match] Mode:', testerMode === 'true' ? 'TESTER' : 'DEV');
-        await initialize(participantId);
-        setProfileLoadTime(Date.now());
-      } catch (error) {
-        console.error('[Match] Error initializing A/B test:', error);
+    async function init() {
+      if (!session || !currentUser) {
+        router.replace("/login");
+        return;
       }
+
+      const testerMode = await AsyncStorage.getItem("@harmonize_is_tester_mode");
+      if (!cancelled) setIsTesterMode(testerMode === "true");
+
+      await initialize(currentUser.id);
+      if (!cancelled) setProfileLoadTime(Date.now());
+    }
+
+    init();
+    return () => {
+      cancelled = true;
     };
+  }, [session, currentUser, initialize, router]);
 
-    initializeABTest();
-  }, [session, currentUser]);
-
-  // Track load time when profile changes
+  // ------------------------------------------------------------
+  // EFFECT: Profile load time on index change
+  // ------------------------------------------------------------
   useEffect(() => {
     setProfileLoadTime(Date.now());
   }, [currentIndex]);
 
-  const totalProfiles = TEST_PROFILES.length;
+  // ------------------------------------------------------------
+  // ANIMATION SLIDE HANDLER (stable callback)
+  // ------------------------------------------------------------
+  const slideToNext = useCallback(
+    (direction: "left" | "right", callback: () => void) => {
+      const toValue = direction === "left" ? -screenWidth : screenWidth;
+      const resetValue = direction === "left" ? screenWidth : -screenWidth;
 
-  const handleNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % totalProfiles);
-  };
+      Animated.timing(slideAnim, {
+        toValue,
+        duration: 250,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => {
+        callback();
+        slideAnim.setValue(resetValue);
 
-  const handlePrevious = () => {
-    setCurrentIndex((prev) => (prev - 1 + totalProfiles) % totalProfiles);
-  };
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 250,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }).start();
+      });
+    },
+    [screenWidth, slideAnim]
+  );
 
-  const handleLike = async () => {
-  const today = new Date().toISOString().split("T")[0]; // e.g. "2025-11-15"
+  // ------------------------------------------------------------
+  // NEXT PROFILE (safe)
+  // ------------------------------------------------------------
+  const handleNext = useCallback(() => {
+    setCurrentIndex((prev) => (prev + 1) % TEST_PROFILES.length);
+  }, []);
 
-  // 1. Load current like count
-  const stored = await AsyncStorage.getItem(STORAGE_KEY);
-  let data = stored ? JSON.parse(stored) : { date: today, count: 0 };
+  // ------------------------------------------------------------
+  // LIKE (creates real match)
+  // ------------------------------------------------------------
+  const handleLike = useCallback(async () => {
+    const today = new Date().toISOString().split("T")[0];
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    let data = stored ? JSON.parse(stored) : { date: today, count: 0 };
 
-  // 2. Reset if it's a new day
-  if (data.date !== today) {
-    data = { date: today, count: 0 };
-  }
+    if (data.date !== today) data = { date: today, count: 0 };
 
-  // 3. Enforce daily limit
-  if (data.count >= MAX_LIKES_PER_DAY) {
-    Alert.alert(
-      "Daily Limit Reached",
-      `You've used your ${MAX_LIKES_PER_DAY} likes for today as a free harmonize user. Come back tomorrow for more likes!`
-    );
-    return; // 🚫 Stop – do not register the like
-  }
+    if (data.count >= MAX_LIKES_PER_DAY) {
+      Alert.alert(
+        "Daily Limit Reached",
+        `You've used your ${MAX_LIKES_PER_DAY} likes for today as a free harmonize user.`
+      );
+      return;
+    }
 
-  // 4. Process the like action
-  const currentProfile = TEST_PROFILES[currentIndex];
-  if (currentProfile) {
+    const p: TestProfile = TEST_PROFILES[currentIndex];
+
     await trackDecision(
-      currentProfile.id,
-      currentProfile.profileType,
+      p.id,
+      p.profileType ?? "neutral",
       profileLoadTime,
       "like"
     );
-    console.log(
-      "Liked profile:",
-      currentProfile.name,
-      "(",
-      currentProfile.profileType,
-      ")"
+
+    if (currentUser?.id) {
+      await upsertMatchForTestProfile({
+        userId: currentUser.id,
+        testProfileId: p.id,
+        name: p.name,
+        avatarUrl: "",
+        city: "",
+        age: p.age,
+        concertDate: "2025-12-15"
+      });
+    }
+
+    data.count += 1;
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+    slideToNext("right", handleNext);
+  }, [currentIndex, profileLoadTime, slideToNext, handleNext, currentUser, trackDecision]);
+
+  // ------------------------------------------------------------
+  // PASS
+  // ------------------------------------------------------------
+  const handlePass = useCallback(async () => {
+    const p = TEST_PROFILES[currentIndex];
+
+    await trackDecision(
+      p.id,
+      p.profileType ?? "neutral",
+      profileLoadTime,
+      "pass"
     );
-  }
 
-  // 5. Store updated count
-  data.count += 1;
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    slideToNext("left", handleNext);
+  }, [currentIndex, profileLoadTime, slideToNext, handleNext, trackDecision]);
 
-  // 6. Move to next profile
-  handleNext();
-};
+  // ------------------------------------------------------------
+  // BLOCK
+  // ------------------------------------------------------------
+  const handleBlock = useCallback(async () => {
+    const p = TEST_PROFILES[currentIndex];
 
+    await trackDecision(
+      p.id,
+      p.profileType ?? "neutral",
+      profileLoadTime,
+      "block"
+    );
 
-  const handlePass = async () => {
-    const currentProfile = TEST_PROFILES[currentIndex];
-    if (currentProfile) {
-      // Track decision
-      await trackDecision(
-        currentProfile.id,
-        currentProfile.profileType,
-        profileLoadTime,
-        'pass'
-      );
-      console.log('Passed profile:', currentProfile.name, '(', currentProfile.profileType, ')');
+    slideToNext("left", handleNext);
+  }, [currentIndex, profileLoadTime, slideToNext, handleNext, trackDecision]);
+
+  // ------------------------------------------------------------
+  // RESET LIKES (tester only)
+  // ------------------------------------------------------------
+  const resetLikes = useCallback(async () => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+
+      // Reset daily likes
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ date: today, count: 0 }));
+
+      // Delete matches in Supabase
+      if (currentUser?.id) {
+        await deleteAllMatchesForUser(currentUser.id);
+        console.log("[MatchScreen] All matches cleared for user:", currentUser.id);
+      }
+
+      Alert.alert("Success", "Daily likes and matches have been reset.");
+    } catch (error) {
+      Alert.alert("Error", "Failed to reset matches: " + error);
     }
-    // Move to next profile
-    handleNext();
-  };
+  }, [currentUser]);
 
-  const handleBlock = async () => {
-    const currentProfile = TEST_PROFILES[currentIndex];
-    if (currentProfile) {
-      // Track decision
-      await trackDecision(
-        currentProfile.id,
-        currentProfile.profileType,
-        profileLoadTime,
-        'block'
-      );
-      console.log('Blocked profile:', currentProfile.name, '(', currentProfile.profileType, ')');
-    }
-    // Move to next profile
-    handleNext();
-  };
 
-  const handleLogout = () => {
+  // ------------------------------------------------------------
+  // LOGOUT
+  // ------------------------------------------------------------
+  const handleLogout = useCallback(() => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout? Your test data will be preserved.',
+      "Logout",
+      "Are you sure?",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Logout',
-          style: 'destructive',
+          text: "Logout",
+          style: "destructive",
           onPress: async () => {
-            try {
-              // Sign out from Supabase auth
-              const { signOut } = useUserStore.getState();
-              await signOut();
-              console.log('[Match] User logged out');
-              router.replace('/login');
-            } catch (error) {
-              console.error('[Match] Error logging out:', error);
-              Alert.alert('Error', 'Failed to logout');
-            }
+            const { signOut } = useUserStore.getState();
+            await signOut();
+            router.replace("/login");
           },
         },
       ]
     );
-  };
+  }, [router]);
 
-  // Get current test profile
-  const currentProfile: TestProfile | null = TEST_PROFILES[currentIndex] || null;
-
-  // Show loading state while A/B test initializes
+  // ------------------------------------------------------------
+  // RENDER
+  // ------------------------------------------------------------
   if (isLoading) {
     return (
       <View style={styles.container}>
@@ -186,43 +243,42 @@ export default function MatchScreen() {
     );
   }
 
-  if (!currentProfile) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>No profiles available</Text>
-      </View>
-    );
-  }
+  const currentProfile = TEST_PROFILES[currentIndex];
 
   return (
     <View style={styles.container}>
-      {/* Header with profile counter and logout */}
       <View style={styles.header}>
         <View style={styles.profileCounter}>
           <Text style={styles.counterText}>
-            Profile {currentIndex + 1} / {totalProfiles}
+            Profile {currentIndex + 1} / {TEST_PROFILES.length}
           </Text>
-          {/* Show variant info ONLY in developer mode */}
+
           {!isTesterMode && variant && (
             <Text style={[styles.counterText, { fontSize: 12, opacity: 0.6, marginTop: 4 }]}>
               Variant {variant}
             </Text>
           )}
         </View>
+
+        {isTesterMode && (
+          <TouchableOpacity onPress={resetLikes} style={styles.logoutButton}>
+            <MaterialCommunityIcons name="refresh" size={24} color={COLORS.primary} />
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <MaterialCommunityIcons name="logout" size={24} color={COLORS.error} />
         </TouchableOpacity>
       </View>
 
-      {/* A/B Test Profile Card - scrollable */}
       <View style={styles.cardContainer}>
-        <ScrollView style={styles.cardScrollView} showsVerticalScrollIndicator={false}>
-          <ABTestProfileCard profile={currentProfile} />
-        </ScrollView>
+        <Animated.View style={{ flex: 1, transform: [{ translateX: slideAnim }] }}>
+          <ScrollView style={styles.cardScrollView} showsVerticalScrollIndicator={false}>
+            <ABTestProfileCard profile={currentProfile} />
+          </ScrollView>
+        </Animated.View>
 
-        {/* Floating Action Buttons Overlay */}
         <View style={styles.floatingButtonsContainer}>
-          {/* Pass Button - Bottom Left */}
           <TouchableOpacity
             style={[styles.floatingActionButton, styles.passButton]}
             onPress={handlePass}
@@ -231,7 +287,6 @@ export default function MatchScreen() {
             <MaterialCommunityIcons name="close" size={responsiveSizes.icon.xlarge} color={COLORS.error} />
           </TouchableOpacity>
 
-          {/* Block Button - Bottom Center */}
           <TouchableOpacity
             style={[styles.floatingActionButton, styles.blockButton]}
             onPress={handleBlock}
@@ -240,7 +295,6 @@ export default function MatchScreen() {
             <MaterialCommunityIcons name="cancel" size={responsiveSizes.icon.large} color={COLORS.text.inverse} />
           </TouchableOpacity>
 
-          {/* Like Button - Bottom Right */}
           <TouchableOpacity
             style={[styles.floatingActionButton, styles.likeButton]}
             onPress={handleLike}
