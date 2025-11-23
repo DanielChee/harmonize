@@ -23,21 +23,22 @@ export async function updateUserProfile(
   updates: Partial<User>
 ): Promise<User | null> {
   try {
+    // Use upsert to handle both create and update cases
+    // This is important because profile might not exist yet during profile setup
     const { data, error } = await supabase
       .from("profiles")
-      .update(updates)
-      .eq("id", userId)
+      .upsert({ id: userId, ...updates }, { onConflict: 'id' })
       .select()
       .single();
 
     if (error) {
-      console.error("Error updating profile:", error);
+      console.error("Error upserting profile:", error);
       throw new Error(error.message);
     }
 
     return data as User;
   } catch (err) {
-    console.error("Failed to update profile:", err);
+    console.error("Failed to upsert profile:", err);
     throw err;
   }
 }
@@ -98,7 +99,7 @@ export function isProfileComplete(user: User | null): boolean {
   if (user.profile_complete === true) return true;
 
   // Required basic fields
-  const hasBasicInfo =
+  const hasBasicInfo = !!(
     user.display_name &&
     user.display_name.trim() !== "" &&
     user.bio &&
@@ -107,17 +108,17 @@ export function isProfileComplete(user: User | null): boolean {
     user.pronouns.trim() !== "" &&
     user.age > 0 &&
     user.city &&
-    user.city.trim() !== "";
+    user.city.trim() !== "");
 
   // Required media
-  const hasProfilePicture =
-    user.profile_picture_url && user.profile_picture_url.trim() !== "";
+  const hasProfilePicture = !!(
+    user.profile_picture_url && user.profile_picture_url.trim() !== "");
 
   // Required concert preferences
-  const hasConcertPreferences =
+  const hasConcertPreferences = !!(
     user.concert_budget &&
     user.concert_seating &&
-    user.concert_transportation;
+    user.concert_transportation);
 
   return hasBasicInfo && hasProfilePicture && hasConcertPreferences;
 }

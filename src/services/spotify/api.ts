@@ -142,7 +142,7 @@ const transformArtist = (artist: ArtistObject): SpotifyArtist => {
   return {
     id: artist.id,
     name: artist.name,
-    image_url: artist.images[0]?.url || 'https://i.pravatar.cc/300',
+    image_url: artist.images[0]?.url || '',
     genres: artist.genres,
   };
 };
@@ -156,7 +156,7 @@ const transformTrack = (track: TrackObject): SpotifyTrack => {
     name: track.name,
     artist: track.artists[0]?.name || 'Unknown Artist',
     preview_url: track.preview_url || '',
-    image_url: track.album.images[0]?.url || 'https://i.pravatar.cc/300',
+    image_url: track.album.images[0]?.url || '',
     duration_ms: track.duration_ms,
   };
 };
@@ -191,6 +191,7 @@ export const fetchAllSpotifyData = async (): Promise<SpotifyData> => {
       profile_id: userProfile.id,
       spotify_user_id: userProfile.id,
       spotify_username: userProfile.display_name || userProfile.id,
+      profile_picture_url: userProfile.images?.[0]?.url,
       top_genres: topGenres,
       top_artists: topArtists,
       top_tracks: topTracks,

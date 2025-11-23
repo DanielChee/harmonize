@@ -7,7 +7,7 @@ import { Button } from '@components/common/Button';
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getSession } from '@services/supabase/auth';
-import { getUserProfile } from '@services/supabase/user';
+import { getUserProfile, updateUserProfile } from '@services/supabase/user';
 import { useUserStore } from '@store';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -32,10 +32,10 @@ export default function ProfileSetupScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  
+
   // Track timing for profile creation
   const profileCreationStartTime = useRef<number | null>(null);
-  
+
   // Track last field that was updated
   const lastFieldUpdated = useRef<string | null>(null);
 
@@ -48,21 +48,21 @@ export default function ProfileSetupScreen() {
     mbti: '',
     pronouns: '',
     bio: '',
-    
+
     // Step 2: Music Taste
     top_genres: [] as string[],
     top_artists: [] as string[],
     top_songs: [] as string[],
     sprint_5_variant: undefined as 'variant_a' | 'variant_b' | undefined,
-    
+
     // Step 3: Profile Picture
     profile_picture_url: '',
-    
+
     // Step 4: Concert Preferences
     concert_budget: '',
     concert_seating: '',
     concert_transportation: '',
-    
+
     // Step 5: University (optional)
     university: '',
     academic_field: '',
@@ -78,7 +78,7 @@ export default function ProfileSetupScreen() {
     try {
       setIsLoading(true);
       const userSession = session || await getSession();
-      
+
       if (!userSession?.user) {
         router.replace('/login');
         return;
@@ -86,7 +86,7 @@ export default function ProfileSetupScreen() {
 
       setSession(userSession);
       const profile = await getUserProfile(userSession.user.id);
-      
+
       if (profile) {
         setCurrentUser(profile);
         // Pre-fill form with existing data
@@ -130,7 +130,7 @@ export default function ProfileSetupScreen() {
   const updateFormData = (updates: Partial<typeof formData>) => {
     // Start timing on first field interaction
     startTimingIfNeeded();
-    
+
     // Track the last field that was updated
     // Filter out metadata fields like sprint_5_variant that are updated alongside other fields
     const fieldKeys = Object.keys(updates).filter(key => key !== 'sprint_5_variant');
@@ -139,7 +139,7 @@ export default function ProfileSetupScreen() {
       // When multiple fields update, the first is usually the main one
       lastFieldUpdated.current = fieldKeys[0];
     }
-    
+
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
@@ -189,7 +189,7 @@ export default function ProfileSetupScreen() {
   // Helper function to count filled fields
   const countFilledFields = (): number => {
     let count = 0;
-    
+
     // Step 1: Basic Info
     if (formData.display_name.trim()) count++;
     if (formData.city.trim()) count++;
@@ -197,26 +197,26 @@ export default function ProfileSetupScreen() {
     if (formData.mbti.trim()) count++;
     if (formData.pronouns.trim()) count++;
     if (formData.bio.trim()) count++;
-    
+
     // Step 2: Music Taste
     if (formData.top_genres.length > 0) count++;
     if (formData.top_artists.length > 0) count++;
     if (formData.top_songs.length > 0) count++;
-    
+
     // Step 3: Profile Picture
     if (formData.profile_picture_url.trim()) count++;
-    
+
     // Step 4: Concert Preferences
     if (formData.concert_budget.trim()) count++;
     if (formData.concert_seating.trim()) count++;
     if (formData.concert_transportation.trim()) count++;
-    
+
     // Step 5: University (optional)
     if (formData.university.trim()) count++;
     if (formData.academic_field.trim()) count++;
     if (formData.academic_year.trim()) count++;
     if (formData.student_email.trim()) count++;
-    
+
     return count;
   };
 
@@ -248,10 +248,10 @@ export default function ProfileSetupScreen() {
   const logExitInfo = () => {
     const stepTitle = getStepTitle();
     const filledFieldsCount = countFilledFields();
-    const lastField = lastFieldUpdated.current 
-      ? getFieldName(lastFieldUpdated.current) 
+    const lastField = lastFieldUpdated.current
+      ? getFieldName(lastFieldUpdated.current)
       : 'None';
-    
+
     // Calculate time spent if timing was started
     let timeSpentMessage = 'N/A (no field interactions)';
     if (profileCreationStartTime.current !== null) {
@@ -260,14 +260,14 @@ export default function ProfileSetupScreen() {
       const elapsedSeconds = (elapsedTime / 1000).toFixed(2);
       const elapsedMinutes = Math.floor(elapsedTime / 60000);
       const remainingSeconds = ((elapsedTime % 60000) / 1000).toFixed(2);
-      
+
       if (elapsedMinutes > 0) {
         timeSpentMessage = `${elapsedMinutes} minute(s) and ${remainingSeconds} seconds (${elapsedTime}ms total)`;
       } else {
         timeSpentMessage = `${elapsedSeconds} seconds (${elapsedTime}ms total)`;
       }
     }
-    
+
     console.log('[ProfileSetup] User exited profile setup:');
     console.log(`  - Step quit at: Step ${currentStep} (${stepTitle})`);
     console.log(`  - Last field filled: ${lastField}`);
@@ -277,7 +277,7 @@ export default function ProfileSetupScreen() {
 
   const handleExit = () => {
     // Check if user has made any changes
-    const hasChanges = 
+    const hasChanges =
       formData.display_name ||
       formData.city ||
       formData.age > 0 ||
@@ -310,7 +310,7 @@ export default function ProfileSetupScreen() {
             onPress: () => {
               // Log exit information after user confirms
               logExitInfo();
-              
+
               // Navigate back to profile page
               if (currentUser?.profile_complete) {
                 router.replace('/(tabs)/profile');
@@ -325,7 +325,7 @@ export default function ProfileSetupScreen() {
     } else {
       // No changes, just exit - log and navigate
       logExitInfo();
-      
+
       if (currentUser?.profile_complete) {
         router.replace('/(tabs)/profile');
       } else {
@@ -347,14 +347,14 @@ export default function ProfileSetupScreen() {
       const elapsedSeconds = (elapsedTime / 1000).toFixed(2);
       const elapsedMinutes = Math.floor(elapsedTime / 60000);
       const remainingSeconds = ((elapsedTime % 60000) / 1000).toFixed(2);
-      
+
       if (elapsedMinutes > 0) {
         console.log(`[ProfileSetup] Time spent on profile creation: ${elapsedMinutes} minute(s) and ${remainingSeconds} seconds (${elapsedTime}ms total)`);
       } else {
         console.log(`[ProfileSetup] Time spent on profile creation: ${elapsedSeconds} seconds (${elapsedTime}ms total)`);
       }
     }
-    
+
     // Log number of fields filled
     const filledFieldsCount = countFilledFields();
     console.log(`[ProfileSetup] Total fields filled: ${filledFieldsCount}`);
@@ -389,17 +389,17 @@ export default function ProfileSetupScreen() {
         profile_complete: true,
       };
 
-      // TODO: Uncomment when ready to save to database
-      // await updateUserProfile(session.user.id, updates);
-      
-      // Update local state
-      // const updatedProfile = await getUserProfile(session.user.id);
-      // if (updatedProfile) {
-      //   setCurrentUser(updatedProfile);
-      // }
+      // Save to database
+      await updateUserProfile(session.user.id, updates);
 
-      // Show preview instead of navigating immediately
-      console.log('[ProfileSetup] Skipping database save and showing preview directly. To save to database, uncomment the updateUserProfile call and comment out the setShowPreview line.');
+      // Update local state with fresh data from database
+      const updatedProfile = await getUserProfile(session.user.id);
+      if (updatedProfile) {
+        setCurrentUser(updatedProfile);
+      }
+
+      // Show preview after successful save
+      console.log('[ProfileSetup] Profile saved successfully to database');
       setIsSaving(false);
       setShowPreview(true);
     } catch (error) {

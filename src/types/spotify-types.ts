@@ -150,6 +150,7 @@ export interface SpotifyData {
   profile_id?: string;
   spotify_user_id: string;
   spotify_username?: string;
+  profile_picture_url?: string;
   top_genres: string[];
   top_artists: SpotifyArtist[];
   top_tracks: SpotifyTrack[];

@@ -21,7 +21,7 @@ interface CardProps {
   variant?: 'default' | 'elevated' | 'outlined';
 
   /** Custom styles */
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
 
   /** Optional left icon (24x24px from Figma spec) */
   icon?: React.ReactNode;
