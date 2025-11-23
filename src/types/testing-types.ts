@@ -51,6 +51,11 @@ export interface TestProfile extends BaseProfile {
   // Type B data (badges)
   badgesTypeB: BadgeDisplay;
   totalReviews: number;
+
+  // Music Data for Matching
+  top_genres: string[];
+  top_artists: string[];
+
 }
 
 // Test variant assignment (A or B)

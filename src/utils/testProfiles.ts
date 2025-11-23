@@ -112,6 +112,11 @@ export const TEST_PROFILE_ALEX: TestProfile = {
     q3Badge: { emoji: '🪨', name: 'Diamond Reliable' },    // Reliability
     harmonies: { count: 7, total: 8 },
   },
+
+  // Music Data
+  top_genres: ['Indie Rock', 'Alternative', 'Dream Pop', 'Shoegaze'],
+  top_artists: ['Tame Impala', 'Beach House', 'Phoebe Bridgers', 'The Strokes', 'Vampire Weekend'],
+
 };
 
 // JORDAN – Hip-Hop/R&B, more balanced (neutral)
@@ -189,6 +194,11 @@ export const TEST_PROFILE_JORDAN: TestProfile = {
     q3Badge: { emoji: '🧭', name: 'Silver Reliable' },
     harmonies: { count: 4, total: 6 },
   },
+
+  // Music Data
+  top_genres: ['Hip Hop', 'R&B', 'Trap', 'Rap'],
+  top_artists: ['Kendrick Lamar', 'J. Cole', 'Drake', 'SZA', 'Frank Ocean'],
+
 };
 
 // TAYLOR – Pop/EDM, very strong social/energy presence (positive)
@@ -274,6 +284,11 @@ export const TEST_PROFILE_TAYLOR: TestProfile = {
     q3Badge: { emoji: '⏰', name: 'Gold Reliable' },
     harmonies: { count: 6, total: 7 },
   },
+
+  // Music Data
+  top_genres: ['Pop', 'EDM', 'Dance Pop', 'Electropop'],
+  top_artists: ['Taylor Swift', 'Dua Lipa', 'Ariana Grande', 'Calvin Harris', 'The Chainsmokers'],
+
 };
 
 // Export array for easy cycling

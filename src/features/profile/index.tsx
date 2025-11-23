@@ -8,6 +8,9 @@ import { useEffect, useState } from "react";
 import { Card } from "@components";
 import { fetchAllSpotifyData, isAuthenticated } from "@services/spotify";
 import type { SpotifyData } from "@types";
+import { supabase } from "@services/supabase/supabase";
+import { getCurrentUserProfile } from "@services/spotify";
+import { Alert } from "react-native";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -54,25 +57,25 @@ export default function ProfileScreen() {
   // Variant B (From Spotify): Use Spotify data if available, otherwise fall back to stored
   // Variant A (Manual Input): Always use stored user data, never use Spotify data
   const useSpotifyData = currentUser.sprint_5_variant === 'variant_b' && displaySpotifyData;
-  
+
   const topGenres = useSpotifyData && displaySpotifyData?.top_genres && displaySpotifyData.top_genres.length > 0
     ? displaySpotifyData.top_genres
     : (currentUser.top_genres && Array.isArray(currentUser.top_genres) && currentUser.top_genres.length > 0)
-    ? currentUser.top_genres
-    : [];
+      ? currentUser.top_genres
+      : [];
 
   // Keep full SpotifyArtist objects if using Spotify data, otherwise use string names
   const topArtists = useSpotifyData && displaySpotifyData?.top_artists && displaySpotifyData.top_artists.length > 0
     ? displaySpotifyData.top_artists
     : (currentUser.top_artists && Array.isArray(currentUser.top_artists) && currentUser.top_artists.length > 0)
-    ? currentUser.top_artists.map(name => ({ id: name, name, image_url: undefined }))
-    : [];
-  
+      ? currentUser.top_artists.map(name => ({ id: name, name, image_url: undefined }))
+      : [];
+
   // Keep full SpotifyTrack objects if using Spotify data, otherwise parse song strings
   const topSongs = useSpotifyData && displaySpotifyData?.top_tracks && displaySpotifyData.top_tracks.length > 0
     ? displaySpotifyData.top_tracks
     : (currentUser.top_songs && Array.isArray(currentUser.top_songs) && currentUser.top_songs.length > 0)
-    ? currentUser.top_songs.map((songStr, idx) => {
+      ? currentUser.top_songs.map((songStr, idx) => {
         const [name, ...artistParts] = songStr.split(' - ');
         const artist = artistParts.join(' - ') || 'Unknown Artist';
         return {
@@ -84,7 +87,7 @@ export default function ProfileScreen() {
           preview_url: '',
         };
       })
-    : [];
+      : [];
 
 
   return (
@@ -99,8 +102,8 @@ export default function ProfileScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <Image 
-            source={{ uri: currentUser.profile_picture_url || 'https://i.pravatar.cc/300?img=1' }} 
+          <Image
+            source={{ uri: currentUser.profile_picture_url || 'https://i.pravatar.cc/300?img=1' }}
             style={styles.avatar}
           />
           <View style={styles.headerInfo}>
@@ -185,10 +188,10 @@ export default function ProfileScreen() {
               <Text style={styles.sectionTitle}>Music Taste</Text>
               {currentUser.sprint_5_variant && (
                 <View style={styles.variantBadge}>
-                  <MaterialIcons 
-                    name={currentUser.sprint_5_variant === 'variant_b' ? 'music-note' : 'edit'} 
-                    size={14} 
-                    color={COLORS.text.secondary} 
+                  <MaterialIcons
+                    name={currentUser.sprint_5_variant === 'variant_b' ? 'music-note' : 'edit'}
+                    size={14}
+                    color={COLORS.text.secondary}
                   />
                   <Text style={styles.variantText}>
                     {currentUser.sprint_5_variant === 'variant_b' ? 'Variant B' : 'Variant A'}
@@ -312,11 +315,72 @@ export default function ProfileScreen() {
         {/* Edit Profile Button */}
         <TouchableOpacity
           style={styles.editButton}
-          onPress={() => router.push('/profile-setup')}
+          onPress={() => router.push('/edit-profile')}
         >
           <MaterialIcons name="edit" size={20} color={COLORS.text.inverse} />
           <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
+
+        {/* Admin Tools Section (Only for Test Admin) */}
+        {currentUser.id === '00000000-0000-0000-0000-000000000001' && (
+          <Card style={[styles.section, { marginTop: SPACING.xl, borderColor: COLORS.text.secondary, borderWidth: 1 }]}>
+            <Text style={styles.sectionTitle}>Admin Tools</Text>
+
+            <View style={{ gap: SPACING.md, marginTop: SPACING.md }}>
+              {/* Dashboard Link */}
+              <TouchableOpacity
+                style={[styles.editButton, { backgroundColor: COLORS.text.secondary, marginTop: 0 }]}
+                onPress={() => router.push('/analytics')}
+              >
+                <MaterialIcons name="admin-panel-settings" size={20} color={COLORS.text.inverse} />
+                <Text style={styles.editButtonText}>Admin Dashboard</Text>
+              </TouchableOpacity>
+
+              {/* Elements Showcase Link */}
+              <TouchableOpacity
+                style={[styles.editButton, { backgroundColor: COLORS.primary, marginTop: 0 }]}
+                onPress={() => router.push('/elements')}
+              >
+                <MaterialIcons name="widgets" size={20} color={COLORS.text.inverse} />
+                <Text style={styles.editButtonText}>UI Elements</Text>
+              </TouchableOpacity>
+
+              {/* Connection Tests */}
+              <Text style={[styles.subsectionTitle, { marginTop: SPACING.sm }]}>Connection Tests</Text>
+
+              <TouchableOpacity
+                style={[styles.infoCard, { justifyContent: 'center' }]}
+                onPress={async () => {
+                  try {
+                    const { count, error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+                    if (error) throw error;
+                    Alert.alert('Supabase Connected', `Connection successful. Found ${count} profiles.`);
+                  } catch (e: any) {
+                    Alert.alert('Supabase Error', e.message || 'Connection failed');
+                  }
+                }}
+              >
+                <MaterialIcons name="storage" size={20} color={COLORS.primary} />
+                <Text style={styles.infoText}>Test Supabase Connection</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.infoCard, { justifyContent: 'center' }]}
+                onPress={async () => {
+                  try {
+                    const profile = await getCurrentUserProfile();
+                    Alert.alert('Spotify Connected', `Logged in as: ${profile.display_name}`);
+                  } catch (e: any) {
+                    Alert.alert('Spotify Error', 'Failed to fetch profile. Ensure you are logged in.');
+                  }
+                }}
+              >
+                <MaterialIcons name="music-note" size={20} color={COLORS.success} />
+                <Text style={styles.infoText}>Test Spotify Connection</Text>
+              </TouchableOpacity>
+            </View>
+          </Card>
+        )}
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />
@@ -413,7 +477,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   sectionTitle: {
-    ...TYPOGRAPHY.scale.h4,
+    ...TYPOGRAPHY.scale.h3,
     color: COLORS.text.primary,
     fontWeight: TYPOGRAPHY.weights.bold,
   },
@@ -474,7 +538,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
     paddingHorizontal: SPACING.sm,
     backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.full,
+    borderRadius: BORDER_RADIUS.pill,
   },
   genreText: {
     ...TYPOGRAPHY.scale.caption,

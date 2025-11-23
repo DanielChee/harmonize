@@ -1,3 +1,3 @@
-export { AnalyticsViewer as default } from '../src/features/testing/AnalyticsViewer';
+import { AdminDashboard } from '../src/features/admin/AdminDashboard';
 
-// To edit this page, navigate to ~/src/features/testing/AnalyticsViewer.tsx
+export default AdminDashboard;

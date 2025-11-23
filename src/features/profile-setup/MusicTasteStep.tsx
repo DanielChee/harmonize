@@ -35,12 +35,12 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
 }) => {
   // Initialize input mode based on existing variant, default to manual
   const [inputMode, setInputMode] = useState<InputMode>(
-    formData.sprint_5_variant === 'variant_b' ? 'spotify' : 'manual'
+    formData.sprint_5_variant === 'variant_a' ? 'spotify' : 'manual'
   );
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
   const [isLoadingSpotify, setIsLoadingSpotify] = useState(false);
   const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
-  
+
   // Manual input states
   const [artistSearchQuery, setArtistSearchQuery] = useState('');
   const [trackSearchQuery, setTrackSearchQuery] = useState('');
@@ -49,7 +49,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     tracks: Array<{ id: string; name: string; artist: string; image_url?: string }>;
   }>({ artists: [], tracks: [] });
   const [isSearching, setIsSearching] = useState(false);
-  
+
   // Store image URLs for artists and songs
   const [artistImages, setArtistImages] = useState<Record<string, string>>({});
   const [songImages, setSongImages] = useState<Record<string, string>>({});
@@ -73,20 +73,20 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       setIsLoadingSpotify(true);
       const data = await fetchAllSpotifyData();
       setSpotifyData(data);
-      
+
       // Auto-populate form with Spotify data
       const genresToSet = data.top_genres?.slice(0, MAX_GENRES) || [];
-      
+
       const artists = data.top_artists.slice(0, MAX_ARTISTS);
       const tracks = data.top_tracks.slice(0, MAX_SONGS);
-      
+
       updateFormData({
         top_genres: genresToSet,
         top_artists: artists.map(a => a.name),
         top_songs: tracks.map(t => `${t.name} - ${t.artist}`),
-        sprint_5_variant: 'variant_b',
+        sprint_5_variant: 'variant_a',
       });
-      
+
       // Store image URLs for artists and songs
       const newArtistImages: Record<string, string> = {};
       artists.forEach(artist => {
@@ -95,7 +95,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
         }
       });
       setArtistImages(newArtistImages);
-      
+
       const newSongImages: Record<string, string> = {};
       tracks.forEach(track => {
         const songString = `${track.name} - ${track.artist}`;
@@ -115,11 +115,11 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     setSpotifyData(data);
     setIsSpotifyConnected(true);
     setInputMode('spotify');
-    
+
     // Clear any existing manual data first to keep variants separate
     // Then auto-populate form with Spotify data
     const genresToSet = data.top_genres?.slice(0, MAX_GENRES) || [];
-    
+
     updateFormData({
       top_genres: genresToSet,
       top_artists: data.top_artists.slice(0, MAX_ARTISTS).map(a => a.name),
@@ -137,15 +137,15 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       top_genres: [],
       top_artists: [],
       top_songs: [],
-      sprint_5_variant: mode === 'manual' ? 'variant_a' : 'variant_b',
+      sprint_5_variant: mode === 'manual' ? 'variant_b' : 'variant_a',
     });
-    
+
     // Clear image mappings
     setArtistImages({});
     setSongImages({});
-    
+
     setInputMode(mode);
-    
+
     // If switching to Spotify mode and already connected, load data
     if (mode === 'spotify' && isSpotifyConnected) {
       loadSpotifyData();
@@ -213,9 +213,9 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       updateFormData({ top_genres: current.filter((_, index) => index !== existingIndex) });
     } else if (current.length < MAX_GENRES) {
       // Add genre (use the exact case from the parameter)
-      updateFormData({ 
+      updateFormData({
         top_genres: [...current, genre],
-        sprint_5_variant: inputMode === 'manual' ? 'variant_a' : 'variant_b',
+        sprint_5_variant: inputMode === 'manual' ? 'variant_b' : 'variant_a',
       });
     }
   };
@@ -223,9 +223,9 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
   const addArtist = (artistName: string, imageUrl?: string) => {
     const current = formData.top_artists || [];
     if (!current.includes(artistName) && current.length < MAX_ARTISTS) {
-      updateFormData({ 
+      updateFormData({
         top_artists: [...current, artistName],
-        sprint_5_variant: inputMode === 'manual' ? 'variant_a' : 'variant_b',
+        sprint_5_variant: inputMode === 'manual' ? 'variant_b' : 'variant_a',
       });
       // Store image URL if provided
       if (imageUrl) {
@@ -251,9 +251,9 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     const songString = `${songName} - ${artistName}`;
     const current = formData.top_songs || [];
     if (!current.includes(songString) && current.length < MAX_SONGS) {
-      updateFormData({ 
+      updateFormData({
         top_songs: [...current, songString],
-        sprint_5_variant: inputMode === 'manual' ? 'variant_a' : 'variant_b',
+        sprint_5_variant: inputMode === 'manual' ? 'variant_b' : 'variant_a',
       });
       // Store image URL if provided
       if (imageUrl) {
@@ -321,13 +321,13 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
           onPress={() => handleModeSwitch('manual')}
           activeOpacity={0.7}
         >
-          <MaterialIcons 
-            name="edit" 
-            size={20} 
-            color={inputMode === 'manual' ? COLORS.text.inverse : COLORS.text.secondary} 
+          <MaterialIcons
+            name="edit"
+            size={20}
+            color={inputMode === 'manual' ? COLORS.text.inverse : COLORS.text.secondary}
           />
           <Text style={[styles.modeButtonText, inputMode === 'manual' && styles.modeButtonTextActive]}>
-            Variant A
+            Variant B
           </Text>
         </TouchableOpacity>
 
@@ -336,13 +336,13 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
           onPress={() => handleModeSwitch('spotify')}
           activeOpacity={0.7}
         >
-          <MaterialIcons 
-            name="music-note" 
-            size={20} 
-            color={inputMode === 'spotify' ? COLORS.text.inverse : COLORS.text.secondary} 
+          <MaterialIcons
+            name="music-note"
+            size={20}
+            color={inputMode === 'spotify' ? COLORS.text.inverse : COLORS.text.secondary}
           />
           <Text style={[styles.modeButtonText, inputMode === 'spotify' && styles.modeButtonTextActive]}>
-            Variant B
+            Variant A
           </Text>
         </TouchableOpacity>
       </View>
@@ -412,7 +412,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
             ? 'Genres imported from Spotify (read-only)'
             : 'Select up to ' + MAX_GENRES + ' genres'}
         </Text>
-        
+
         {/* Selected Genres from Spotify */}
         {inputMode === 'spotify' && spotifyData && formData.top_genres && formData.top_genres.length > 0 && (
           <View style={styles.importedGenres}>
@@ -481,21 +481,21 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
             ? 'Artists imported from Spotify (read-only)'
             : 'Add up to ' + MAX_ARTISTS + ' artists'}
         </Text>
-        
+
         {/* Selected Artists */}
         {formData.top_artists && formData.top_artists.length > 0 && (
           <View style={styles.selectedItems}>
             {formData.top_artists.map((artist, index) => {
               // Look up image from stored images, spotifyData, or searchResults
               const artistImage = artistImages[artist] ||
-                                  spotifyData?.top_artists?.find(a => a.name === artist)?.image_url ||
-                                  searchResults.artists.find(a => a.name === artist)?.image_url;
-              
+                spotifyData?.top_artists?.find(a => a.name === artist)?.image_url ||
+                searchResults.artists.find(a => a.name === artist)?.image_url;
+
               return (
                 <View key={index} style={styles.selectedItem}>
                   {artistImage ? (
-                    <Image 
-                      source={{ uri: artistImage }} 
+                    <Image
+                      source={{ uri: artistImage }}
                       style={styles.selectedItemImage}
                     />
                   ) : (
@@ -573,28 +573,28 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
             ? 'Songs imported from Spotify (read-only)'
             : 'Add up to ' + MAX_SONGS + ' songs'}
         </Text>
-        
+
         {/* Selected Songs */}
         {formData.top_songs && formData.top_songs.length > 0 && (
           <View style={styles.selectedItems}>
             {formData.top_songs.map((song, index) => {
               // Parse song string "Song Name - Artist Name"
               const [songName, artistName] = song.split(' - ');
-              
+
               // Look up image from stored images, spotifyData, or searchResults
               const trackImage = songImages[song] ||
-                                 spotifyData?.top_tracks?.find(t => 
-                                   t.name === songName && t.artist === artistName
-                                 )?.image_url ||
-                                 searchResults.tracks.find(t => 
-                                   t.name === songName && t.artist === artistName
-                                 )?.image_url;
-              
+                spotifyData?.top_tracks?.find(t =>
+                  t.name === songName && t.artist === artistName
+                )?.image_url ||
+                searchResults.tracks.find(t =>
+                  t.name === songName && t.artist === artistName
+                )?.image_url;
+
               return (
                 <View key={index} style={styles.selectedItem}>
                   {trackImage ? (
-                    <Image 
-                      source={{ uri: trackImage }} 
+                    <Image
+                      source={{ uri: trackImage }}
                       style={styles.selectedItemImageSquare}
                     />
                   ) : (

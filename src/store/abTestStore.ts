@@ -23,6 +23,7 @@ interface ABTestStore {
   error: string | null;
 
   // Actions
+  setVariant: (variant: TestVariant) => Promise<void>;
   initialize: (userId: string) => Promise<void>;
   getVariant: () => TestVariant | null;
   trackView: (
@@ -46,6 +47,16 @@ export const useABTestStore = create<ABTestStore>((set, get) => ({
   assignment: null,
   isLoading: true,
   error: null,
+
+
+
+  // Manually set variant (for testing/admin)
+  setVariant: async (variant: TestVariant) => {
+    set({ variant });
+    // In a real app, we would persist this override
+    // For now, we'll just update the local state and log it
+    console.log(`[A/B Test] Variant manually set to ${variant}`);
+  },
 
   // Initialize user's variant assignment
   initialize: async (userId: string) => {

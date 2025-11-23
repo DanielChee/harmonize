@@ -21,6 +21,7 @@ import {
   View
 } from "react-native";
 import { ABTestProfileCard } from "../testing/ABTestProfileCard";
+import { calculateMatchScore } from "./MatchingService";
 import styles from "./styles";
 
 const MAX_LIKES_PER_DAY = 5;
@@ -244,6 +245,9 @@ export default function MatchScreen() {
   }
 
   const currentProfile = TEST_PROFILES[currentIndex];
+
+  // Calculate match score
+  const matchScore = currentUser ? calculateMatchScore(currentUser, currentProfile) : 0;
 
   return (
     <View style={styles.container}>
