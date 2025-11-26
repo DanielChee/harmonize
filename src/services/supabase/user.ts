@@ -23,6 +23,30 @@ export async function updateUserProfile(
   updates: Partial<User>
 ): Promise<User | null> {
   try {
+    // Check for test admin user
+    if (userId === "00000000-0000-0000-0000-000000000001") {
+      console.log("[User] Simulating profile update for Test Admin");
+      return {
+        id: "00000000-0000-0000-0000-000000000001",
+        email: "test@admin.com",
+        username: "test_admin",
+        display_name: "Test Admin",
+        bio: "This is a test admin account for development purposes.",
+        pronouns: "they/them",
+        age: 25,
+        city: "Atlanta",
+        university: "Georgia Tech",
+        academic_year: "Graduate Student",
+        profile_picture_url: "https://via.placeholder.com/200",
+        looking_for: "both",
+        is_verified: true,
+        is_active: true,
+        profile_complete: true,
+        created_at: new Date().toISOString(),
+        ...updates,
+      } as User;
+    }
+
     // Use upsert to handle both create and update cases
     // This is important because profile might not exist yet during profile setup
     const { data, error } = await supabase
@@ -74,6 +98,11 @@ export async function getUserProfile(userId: string): Promise<User | null> {
       .single();
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        // Profile not found - this is expected if profile creation failed or hasn't happened yet
+        console.warn("Profile not found for user:", userId);
+        return null;
+      }
       console.error("Error fetching profile:", error);
       return null;
     }
@@ -121,4 +150,48 @@ export function isProfileComplete(user: User | null): boolean {
     user.concert_transportation);
 
   return hasBasicInfo && hasProfilePicture && hasConcertPreferences;
+}
+
+/**
+ * Get all user profiles (Admin only)
+ */
+export async function getAllProfiles(): Promise<User[]> {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching all profiles:", error);
+      return [];
+    }
+
+    return data as User[];
+  } catch (err) {
+    console.error("Failed to fetch all profiles:", err);
+    return [];
+  }
+}
+
+/**
+ * Delete a user profile (Admin only)
+ */
+export async function deleteProfile(userId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", userId);
+
+    if (error) {
+      console.error("Error deleting profile:", error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Failed to delete profile:", err);
+    return false;
+  }
 }

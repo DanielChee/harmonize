@@ -53,6 +53,8 @@ export default function ProfileSetupScreen() {
     top_genres: [] as string[],
     top_artists: [] as string[],
     top_songs: [] as string[],
+    artist_images: [] as { name: string; url: string }[],
+    song_images: [] as { name: string; url: string }[],
     sprint_5_variant: undefined as 'variant_a' | 'variant_b' | undefined,
 
     // Step 3: Profile Picture
@@ -100,6 +102,8 @@ export default function ProfileSetupScreen() {
           top_genres: profile.top_genres || [],
           top_artists: profile.top_artists || [],
           top_songs: profile.top_songs || [],
+          artist_images: profile.artist_images || [],
+          song_images: profile.song_images || [],
           sprint_5_variant: profile.sprint_5_variant,
           profile_picture_url: profile.profile_picture_url || '',
           concert_budget: profile.concert_budget || '',
@@ -378,6 +382,8 @@ export default function ProfileSetupScreen() {
         top_genres: formData.top_genres.length > 0 ? formData.top_genres : undefined,
         top_artists: formData.top_artists.length > 0 ? formData.top_artists : undefined,
         top_songs: formData.top_songs.length > 0 ? formData.top_songs : undefined,
+        artist_images: formData.artist_images.length > 0 ? formData.artist_images : undefined,
+        song_images: formData.song_images.length > 0 ? formData.song_images : undefined,
         sprint_5_variant: formData.sprint_5_variant,
         profile_picture_url: cleanOptionalValue(formData.profile_picture_url),
         concert_budget: cleanOptionalValue(formData.concert_budget),
@@ -409,6 +415,27 @@ export default function ProfileSetupScreen() {
         message: errorMessage,
         error,
       });
+
+      // Handle foreign key constraint violation (User deleted from Auth but session persists)
+      if (errorMessage.includes('foreign key constraint') || errorMessage.includes('profiles_id_fkey')) {
+        Alert.alert(
+          'Session Expired',
+          'Your session is no longer valid. Please log in again.',
+          [
+            {
+              text: 'OK',
+              onPress: async () => {
+                const { signOut } = useUserStore.getState();
+                await signOut();
+                router.replace('/login');
+              }
+            }
+          ]
+        );
+        setIsSaving(false);
+        return;
+      }
+
       alert(`Failed to save profile: ${errorMessage}. Please try again.`);
       setIsSaving(false);
     }

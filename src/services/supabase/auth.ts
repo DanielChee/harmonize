@@ -217,24 +217,49 @@ async function createUserProfile(
   email: string,
   username: string
 ): Promise<Error | null> {
-  const { error } = await supabase.from("profiles").insert({
-    id: userId, // This must match auth.users.id
-    email: email,
-    username: username,
-    display_name: username, // Default display name to username
-    bio: "",
-    pronouns: "",
-    age: 0,
-    city: "",
-    university: "",
-    profile_picture_url: "",
-    looking_for: "both",
-    is_active: true,
-  });
+  console.log("[Auth] Creating profile for user:", userId);
 
-  if (error) {
-    console.error("[Auth] Create profile error:", error);
-    return new Error(error.message);
+  const MAX_RETRIES = 3;
+  let lastError;
+
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    // Use upsert to handle cases where a trigger might have already created the profile
+    const { error } = await supabase.from("profiles").upsert({
+      id: userId, // This must match auth.users.id
+      email: email,
+      username: username,
+      display_name: username, // Default display name to username
+      bio: "",
+      pronouns: "",
+      age: 0,
+      city: "",
+      university: "",
+      profile_picture_url: "",
+      looking_for: "both",
+      is_active: true,
+    }, { onConflict: 'id' });
+
+    if (!error) {
+      if (i > 0) console.log(`[Auth] Profile created successfully after ${i} retries`);
+      return null;
+    }
+
+    console.warn(`[Auth] Create profile attempt ${i + 1} failed:`, error.message);
+    lastError = error;
+
+    // If it's a foreign key violation, wait and retry (race condition?)
+    if (error.message.includes("foreign key constraint")) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Wait 1s, 2s, 3s
+      continue;
+    }
+
+    // For other errors, fail immediately
+    break;
+  }
+
+  if (lastError) {
+    console.error("[Auth] Create profile failed after retries:", lastError);
+    return new Error(lastError.message);
   }
 
   return null;

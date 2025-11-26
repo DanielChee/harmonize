@@ -10,6 +10,7 @@ export interface User {
 
   // Authentication
   email?: string; // User's email from Supabase auth
+  role?: 'user' | 'admin'; // User role for access control
 
   // Basic Profile
   username: string;
@@ -33,6 +34,8 @@ export interface User {
   top_genres?: string[]; // Top music genres
   top_artists?: string[]; // Top artists (artist names)
   top_songs?: string[]; // Top songs (format: "Song Name - Artist Name")
+  artist_images?: { name: string; url: string }[]; // JSON array of artist images
+  song_images?: { name: string; url: string }[]; // JSON array of song images
   sprint_5_variant?: 'variant_a' | 'variant_b'; // Variant A = Manual Input, Variant B = From Spotify
 
   // Preferences
@@ -56,7 +59,7 @@ export interface User {
   concert_budget?: string; // e.g., "$0-50", "$50-100", "$100-200", "$200+"
   concert_seating?: string; // e.g., "General Admission", "Reserved Seating", "VIP", "Any"
   concert_transportation?: string; // e.g., "Drive", "Public Transit", "Rideshare", "Walking"
-  
+
   // Profile Completion
   profile_complete?: boolean; // Track if profile setup is complete
 

@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-na
 import { COLORS, SPACING } from '@constants';
 import { AnalyticsViewer } from '../testing/AnalyticsViewer';
 import { SessionManager } from './SessionManager';
-import { VerificationManager } from './VerificationManager';
+import { ProfileManager } from './ProfileManager';
+import { SystemVerification } from './SystemVerification';
 
-type Tab = 'metrics' | 'sessions' | 'verification';
+type Tab = 'metrics' | 'sessions' | 'profiles' | 'system';
 
 export function AdminDashboard() {
     const [activeTab, setActiveTab] = useState<Tab>('metrics');
@@ -16,8 +17,10 @@ export function AdminDashboard() {
                 return <AnalyticsViewer />;
             case 'sessions':
                 return <SessionManager />;
-            case 'verification':
-                return <VerificationManager />;
+            case 'profiles':
+                return <ProfileManager />;
+            case 'system':
+                return <SystemVerification />;
             default:
                 return <AnalyticsViewer />;
         }
@@ -45,10 +48,17 @@ export function AdminDashboard() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={[styles.tab, activeTab === 'verification' && styles.activeTab]}
-                    onPress={() => setActiveTab('verification')}
+                    style={[styles.tab, activeTab === 'profiles' && styles.activeTab]}
+                    onPress={() => setActiveTab('profiles')}
                 >
-                    <Text style={[styles.tabText, activeTab === 'verification' && styles.activeTabText]}>Verify</Text>
+                    <Text style={[styles.tabText, activeTab === 'profiles' && styles.activeTabText]}>Profiles</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'system' && styles.activeTab]}
+                    onPress={() => setActiveTab('system')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'system' && styles.activeTabText]}>System</Text>
                 </TouchableOpacity>
             </View>
 
@@ -93,6 +103,7 @@ const styles = StyleSheet.create({
     tabText: {
         color: COLORS.text.secondary,
         fontWeight: '600',
+        fontSize: 12,
     },
     activeTabText: {
         color: COLORS.primary,

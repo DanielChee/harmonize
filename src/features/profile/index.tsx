@@ -19,6 +19,7 @@ export default function ProfileScreen() {
   const [isLoadingSpotify, setIsLoadingSpotify] = useState(false);
   const [displaySpotifyData, setDisplaySpotifyData] = useState<SpotifyData | null>(spotifyData || null);
 
+
   useEffect(() => {
     loadSpotifyData();
   }, []);
@@ -68,7 +69,15 @@ export default function ProfileScreen() {
   const topArtists = useSpotifyData && displaySpotifyData?.top_artists && displaySpotifyData.top_artists.length > 0
     ? displaySpotifyData.top_artists
     : (currentUser.top_artists && Array.isArray(currentUser.top_artists) && currentUser.top_artists.length > 0)
-      ? currentUser.top_artists.map(name => ({ id: name, name, image_url: undefined }))
+      ? currentUser.top_artists.map(name => {
+        // Try to find image in persisted artist_images
+        const imageObj = currentUser.artist_images?.find(img => img.name === name);
+        return {
+          id: name,
+          name,
+          image_url: imageObj?.url
+        };
+      })
       : [];
 
   // Keep full SpotifyTrack objects if using Spotify data, otherwise parse song strings
@@ -78,11 +87,16 @@ export default function ProfileScreen() {
       ? currentUser.top_songs.map((songStr, idx) => {
         const [name, ...artistParts] = songStr.split(' - ');
         const artist = artistParts.join(' - ') || 'Unknown Artist';
+
+        // Try to find image in persisted song_images
+        // Note: song_images stores name as "Song Name - Artist Name" which matches songStr
+        const imageObj = currentUser.song_images?.find(img => img.name === songStr);
+
         return {
           id: `song-${idx}`,
           name,
           artist,
-          image_url: undefined,
+          image_url: imageObj?.url,
           duration_ms: 0,
           preview_url: '',
         };
@@ -321,66 +335,97 @@ export default function ProfileScreen() {
           <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
 
-        {/* Admin Tools Section (Only for Test Admin) */}
-        {currentUser.id === '00000000-0000-0000-0000-000000000001' && (
-          <Card style={[styles.section, { marginTop: SPACING.xl, borderColor: COLORS.text.secondary, borderWidth: 1 }]}>
-            <Text style={styles.sectionTitle}>Admin Tools</Text>
+        {/* Admin Tools Section (Only for Admin Users) */}
+        {(currentUser.id === '00000000-0000-0000-0000-000000000001' ||
+          currentUser.email === 'admin@harmonize.com' ||
+          currentUser.email === 'anonfox76@gmail.com' ||
+          currentUser.role === 'admin') && (
+            <Card style={[styles.section, { marginTop: SPACING.xl, borderColor: COLORS.text.secondary, borderWidth: 1 }]}>
+              <Text style={styles.sectionTitle}>Admin Tools</Text>
 
-            <View style={{ gap: SPACING.md, marginTop: SPACING.md }}>
-              {/* Dashboard Link */}
-              <TouchableOpacity
-                style={[styles.editButton, { backgroundColor: COLORS.text.secondary, marginTop: 0 }]}
-                onPress={() => router.push('/analytics')}
-              >
-                <MaterialIcons name="admin-panel-settings" size={20} color={COLORS.text.inverse} />
-                <Text style={styles.editButtonText}>Admin Dashboard</Text>
-              </TouchableOpacity>
+              <View style={{ gap: SPACING.md, marginTop: SPACING.md }}>
+                {/* Dashboard Link */}
+                <TouchableOpacity
+                  style={[styles.editButton, { backgroundColor: COLORS.text.secondary, marginTop: 0 }]}
+                  onPress={() => router.push('/analytics')}
+                >
+                  <MaterialIcons name="admin-panel-settings" size={20} color={COLORS.text.inverse} />
+                  <Text style={styles.editButtonText}>Admin Dashboard</Text>
+                </TouchableOpacity>
 
-              {/* Elements Showcase Link */}
-              <TouchableOpacity
-                style={[styles.editButton, { backgroundColor: COLORS.primary, marginTop: 0 }]}
-                onPress={() => router.push('/elements')}
-              >
-                <MaterialIcons name="widgets" size={20} color={COLORS.text.inverse} />
-                <Text style={styles.editButtonText}>UI Elements</Text>
-              </TouchableOpacity>
+                {/* Elements Showcase Link */}
+                <TouchableOpacity
+                  style={[styles.editButton, { backgroundColor: COLORS.primary, marginTop: 0 }]}
+                  onPress={() => router.push('/elements')}
+                >
+                  <MaterialIcons name="widgets" size={20} color={COLORS.text.inverse} />
+                  <Text style={styles.editButtonText}>UI Elements</Text>
+                </TouchableOpacity>
 
-              {/* Connection Tests */}
-              <Text style={[styles.subsectionTitle, { marginTop: SPACING.sm }]}>Connection Tests</Text>
+                {/* Connection Tests */}
+                <Text style={[styles.subsectionTitle, { marginTop: SPACING.sm }]}>Connection Tests</Text>
 
-              <TouchableOpacity
-                style={[styles.infoCard, { justifyContent: 'center' }]}
-                onPress={async () => {
-                  try {
-                    const { count, error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-                    if (error) throw error;
-                    Alert.alert('Supabase Connected', `Connection successful. Found ${count} profiles.`);
-                  } catch (e: any) {
-                    Alert.alert('Supabase Error', e.message || 'Connection failed');
+                <TouchableOpacity
+                  style={[styles.infoCard, { justifyContent: 'center' }]}
+                  onPress={async () => {
+                    try {
+                      const { count, error } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+                      if (error) throw error;
+                      Alert.alert('Supabase Connected', `Connection successful. Found ${count} profiles.`);
+                    } catch (e: any) {
+                      Alert.alert('Supabase Error', e.message || 'Connection failed');
+                    }
+                  }}
+                >
+                  <MaterialIcons name="storage" size={20} color={COLORS.primary} />
+                  <Text style={styles.infoText}>Test Supabase Connection</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.infoCard, { justifyContent: 'center' }]}
+                  onPress={async () => {
+                    try {
+                      const profile = await getCurrentUserProfile();
+                      Alert.alert('Spotify Connected', `Logged in as: ${profile.display_name}`);
+                    } catch (e: any) {
+                      Alert.alert('Spotify Error', 'Failed to fetch profile. Ensure you are logged in.');
+                    }
+                  }}
+                >
+                  <MaterialIcons name="music-note" size={20} color={COLORS.success} />
+                  <Text style={styles.infoText}>Test Spotify Connection</Text>
+                </TouchableOpacity>
+              </View>
+            </Card>
+          )}
+
+
+
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={[styles.editButton, { backgroundColor: COLORS.error, marginTop: SPACING.xl }]}
+          onPress={() => {
+            Alert.alert(
+              'Sign Out',
+              'Are you sure you want to sign out?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Sign Out',
+                  style: 'destructive',
+                  onPress: async () => {
+                    const { signOut } = await import('@services/supabase/auth');
+                    await signOut();
+                    router.replace('/login');
                   }
-                }}
-              >
-                <MaterialIcons name="storage" size={20} color={COLORS.primary} />
-                <Text style={styles.infoText}>Test Supabase Connection</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.infoCard, { justifyContent: 'center' }]}
-                onPress={async () => {
-                  try {
-                    const profile = await getCurrentUserProfile();
-                    Alert.alert('Spotify Connected', `Logged in as: ${profile.display_name}`);
-                  } catch (e: any) {
-                    Alert.alert('Spotify Error', 'Failed to fetch profile. Ensure you are logged in.');
-                  }
-                }}
-              >
-                <MaterialIcons name="music-note" size={20} color={COLORS.success} />
-                <Text style={styles.infoText}>Test Spotify Connection</Text>
-              </TouchableOpacity>
-            </View>
-          </Card>
-        )}
+                }
+              ]
+            );
+          }}
+        >
+          <MaterialIcons name="logout" size={20} color={COLORS.text.inverse} />
+          <Text style={styles.editButtonText}>Sign Out</Text>
+        </TouchableOpacity>
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />

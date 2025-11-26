@@ -18,6 +18,8 @@ interface MusicTasteStepProps {
     top_genres: string[];
     top_artists: string[];
     top_songs: string[];
+    artist_images: { name: string; url: string }[];
+    song_images: { name: string; url: string }[];
     sprint_5_variant?: 'variant_a' | 'variant_b';
   };
   updateFormData: (updates: Partial<MusicTasteStepProps['formData']>) => void;
@@ -51,8 +53,22 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
   const [isSearching, setIsSearching] = useState(false);
 
   // Store image URLs for artists and songs
-  const [artistImages, setArtistImages] = useState<Record<string, string>>({});
-  const [songImages, setSongImages] = useState<Record<string, string>>({});
+  // We initialize from formData if available
+  const [artistImages, setArtistImages] = useState<Record<string, string>>(() => {
+    const images: Record<string, string> = {};
+    formData.artist_images?.forEach(img => {
+      images[img.name] = img.url;
+    });
+    return images;
+  });
+
+  const [songImages, setSongImages] = useState<Record<string, string>>(() => {
+    const images: Record<string, string> = {};
+    formData.song_images?.forEach(img => {
+      images[img.name] = img.url;
+    });
+    return images;
+  });
 
   // Check if Spotify is already connected
   useEffect(() => {
@@ -80,14 +96,25 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       const artists = data.top_artists.slice(0, MAX_ARTISTS);
       const tracks = data.top_tracks.slice(0, MAX_SONGS);
 
+      // Construct image arrays
+      const newArtistImagesList = artists
+        .filter(a => a.image_url)
+        .map(a => ({ name: a.name, url: a.image_url! }));
+
+      const newSongImagesList = tracks
+        .filter(t => t.image_url)
+        .map(t => ({ name: `${t.name} - ${t.artist}`, url: t.image_url! }));
+
       updateFormData({
         top_genres: genresToSet,
         top_artists: artists.map(a => a.name),
         top_songs: tracks.map(t => `${t.name} - ${t.artist}`),
+        artist_images: newArtistImagesList,
+        song_images: newSongImagesList,
         sprint_5_variant: 'variant_a',
       });
 
-      // Store image URLs for artists and songs
+      // Store image URLs for artists and songs (local state for UI)
       const newArtistImages: Record<string, string> = {};
       artists.forEach(artist => {
         if (artist.image_url) {
@@ -98,12 +125,12 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
 
       const newSongImages: Record<string, string> = {};
       tracks.forEach(track => {
-        const songString = `${track.name} - ${track.artist}`;
         if (track.image_url) {
-          newSongImages[songString] = track.image_url;
+          newSongImages[`${track.name} - ${track.artist}`] = track.image_url;
         }
       });
       setSongImages(newSongImages);
+
     } catch (error) {
       setIsSpotifyConnected(false);
     } finally {
@@ -120,10 +147,23 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     // Then auto-populate form with Spotify data
     const genresToSet = data.top_genres?.slice(0, MAX_GENRES) || [];
 
+    // Construct image arrays
+    const newArtistImagesList = data.top_artists
+      .slice(0, MAX_ARTISTS)
+      .filter(a => a.image_url)
+      .map(a => ({ name: a.name, url: a.image_url! }));
+
+    const newSongImagesList = data.top_tracks
+      .slice(0, MAX_SONGS)
+      .filter(t => t.image_url)
+      .map(t => ({ name: `${t.name} - ${t.artist}`, url: t.image_url! }));
+
     updateFormData({
       top_genres: genresToSet,
       top_artists: data.top_artists.slice(0, MAX_ARTISTS).map(a => a.name),
       top_songs: data.top_tracks.slice(0, MAX_SONGS).map(t => `${t.name} - ${t.artist}`),
+      artist_images: newArtistImagesList,
+      song_images: newSongImagesList,
     });
   };
 
