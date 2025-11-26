@@ -90,7 +90,11 @@ export function ProfileCardA({ profile }: ProfileCardAProps) {
       {/* Header with Mutual Friends */}
       <View style={styles.header}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{profile.name[0]}</Text>
+          {profile.image ? (
+            <Image source={{ uri: profile.image }} style={{ width: '100%', height: '100%', borderRadius: 999 }} />
+          ) : (
+            <Text style={styles.avatarText}>{profile.name[0]}</Text>
+          )}
         </View>
         <View style={styles.headerInfo}>
           <Text style={styles.name}>{profile.name}</Text>

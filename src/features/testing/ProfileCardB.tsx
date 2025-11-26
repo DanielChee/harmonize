@@ -95,8 +95,8 @@ const ConcertHistoryItem: React.FC<{ concert: typeof MOCK_CONCERT_HISTORY[0] }> 
   );
 };
 
-export function ProfileCardB({ 
-  profile, 
+export function ProfileCardB({
+  profile,
   profilePictureUrl,
   topGenres,
   topArtists,
@@ -107,28 +107,28 @@ export function ProfileCardB({
   concertTransport,
 }: ProfileCardBProps) {
   const { badgesTypeB } = profile;
-  
+
   // Use real data if provided, otherwise use MOCK data
   const spotifyGenres = topGenres && topGenres.length > 0 ? topGenres : MOCK_SPOTIFY_DATA.top_genres;
-  const spotifyArtists = topArtists && topArtists.length > 0 
-    ? topArtists.map((name, index) => ({ 
-        id: String(index + 1), 
-        name, 
-        image_url: `https://i.pravatar.cc/300?img=${51 + index}` 
-      }))
+  const spotifyArtists = topArtists && topArtists.length > 0
+    ? topArtists.map((name, index) => ({
+      id: String(index + 1),
+      name,
+      image_url: `https://i.pravatar.cc/300?img=${51 + index}`
+    }))
     : MOCK_SPOTIFY_DATA.top_artists;
   const spotifyTracks = topSongs && topSongs.length > 0
     ? topSongs.map((songString, index) => {
-        const [name, ...artistParts] = songString.split(' - ');
-        const artist = artistParts.join(' - ') || 'Unknown Artist';
-        return {
-          id: String(index + 1),
-          name: name || songString,
-          artist,
-          image_url: `https://i.pravatar.cc/300?img=${54 + index}`,
-          duration_ms: 200000, // Default duration
-        };
-      })
+      const [name, ...artistParts] = songString.split(' - ');
+      const artist = artistParts.join(' - ') || 'Unknown Artist';
+      return {
+        id: String(index + 1),
+        name: name || songString,
+        artist,
+        image_url: `https://i.pravatar.cc/300?img=${54 + index}`,
+        duration_ms: 200000, // Default duration
+      };
+    })
     : MOCK_SPOTIFY_DATA.top_tracks;
   const featuredTrack = spotifyTracks[0] || MOCK_SPOTIFY_DATA.featured_track;
   const concertsCount = concertsAttended !== undefined ? concertsAttended : profile.concertsAttended;
@@ -139,8 +139,8 @@ export function ProfileCardB({
       {/* Header with Mutual Friends */}
       <View style={styles.header}>
         <View style={styles.avatar}>
-          {profilePictureUrl ? (
-            <Image source={{ uri: profilePictureUrl }} style={styles.avatarImage} />
+          {profilePictureUrl || profile.image ? (
+            <Image source={{ uri: profilePictureUrl || profile.image }} style={styles.avatarImage} />
           ) : (
             <Text style={styles.avatarText}>{profile.name[0]}</Text>
           )}

@@ -41,6 +41,7 @@ export interface BadgeDisplay {
 export interface TestProfile extends BaseProfile {
   id: string;
   name: string;
+  image?: string; // Optional profile image URL
   pronouns: string;
   profileType: ProfileType;
 

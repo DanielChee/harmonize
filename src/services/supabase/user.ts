@@ -195,3 +195,27 @@ export async function deleteProfile(userId: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Get potential matches (all users except current user)
+ */
+export async function getPotentialMatches(currentUserId: string): Promise<User[]> {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .neq("id", currentUserId) // Exclude current user
+      .order("created_at", { ascending: false })
+      .limit(20); // Limit to 20 for now
+
+    if (error) {
+      console.error("Error fetching potential matches:", error);
+      return [];
+    }
+
+    return data as User[];
+  } catch (err) {
+    console.error("Failed to fetch potential matches:", err);
+    return [];
+  }
+}

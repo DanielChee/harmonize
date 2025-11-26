@@ -35,9 +35,10 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
   formData,
   updateFormData,
 }) => {
-  // Initialize input mode based on existing variant, default to manual
+  // Initialize input mode based on existing variant
+  // Variant A = Manual, Variant B = Spotify
   const [inputMode, setInputMode] = useState<InputMode>(
-    formData.sprint_5_variant === 'variant_a' ? 'spotify' : 'manual'
+    formData.sprint_5_variant === 'variant_b' ? 'spotify' : 'manual'
   );
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
   const [isLoadingSpotify, setIsLoadingSpotify] = useState(false);
@@ -111,7 +112,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
         top_songs: tracks.map(t => `${t.name} - ${t.artist}`),
         artist_images: newArtistImagesList,
         song_images: newSongImagesList,
-        sprint_5_variant: 'variant_a',
+        sprint_5_variant: 'variant_b',
       });
 
       // Store image URLs for artists and songs (local state for UI)
@@ -177,7 +178,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       top_genres: [],
       top_artists: [],
       top_songs: [],
-      sprint_5_variant: mode === 'manual' ? 'variant_b' : 'variant_a',
+      sprint_5_variant: mode === 'manual' ? 'variant_a' : 'variant_b',
     });
 
     // Clear image mappings
@@ -255,7 +256,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       // Add genre (use the exact case from the parameter)
       updateFormData({
         top_genres: [...current, genre],
-        sprint_5_variant: inputMode === 'manual' ? 'variant_b' : 'variant_a',
+        sprint_5_variant: inputMode === 'manual' ? 'variant_a' : 'variant_b',
       });
     }
   };
@@ -265,7 +266,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     if (!current.includes(artistName) && current.length < MAX_ARTISTS) {
       updateFormData({
         top_artists: [...current, artistName],
-        sprint_5_variant: inputMode === 'manual' ? 'variant_b' : 'variant_a',
+        sprint_5_variant: inputMode === 'manual' ? 'variant_a' : 'variant_b',
       });
       // Store image URL if provided
       if (imageUrl) {
@@ -293,7 +294,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     if (!current.includes(songString) && current.length < MAX_SONGS) {
       updateFormData({
         top_songs: [...current, songString],
-        sprint_5_variant: inputMode === 'manual' ? 'variant_b' : 'variant_a',
+        sprint_5_variant: inputMode === 'manual' ? 'variant_a' : 'variant_b',
       });
       // Store image URL if provided
       if (imageUrl) {
@@ -367,7 +368,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
             color={inputMode === 'manual' ? COLORS.text.inverse : COLORS.text.secondary}
           />
           <Text style={[styles.modeButtonText, inputMode === 'manual' && styles.modeButtonTextActive]}>
-            Variant B
+            Variant A
           </Text>
         </TouchableOpacity>
 
@@ -382,7 +383,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
             color={inputMode === 'spotify' ? COLORS.text.inverse : COLORS.text.secondary}
           />
           <Text style={[styles.modeButtonText, inputMode === 'spotify' && styles.modeButtonTextActive]}>
-            Variant A
+            Variant B
           </Text>
         </TouchableOpacity>
       </View>

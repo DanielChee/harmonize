@@ -46,6 +46,11 @@ export default function MatchScreen() {
   // ------------------------------------------------------------
   // EFFECT: Initialization (one time per login session)
   // ------------------------------------------------------------
+  const [displayProfiles, setDisplayProfiles] = useState<TestProfile[]>(TEST_PROFILES);
+
+  // ------------------------------------------------------------
+  // EFFECT: Initialization (one time per login session)
+  // ------------------------------------------------------------
   useEffect(() => {
     let cancelled = false;
 
@@ -58,6 +63,51 @@ export default function MatchScreen() {
       const testerMode = await AsyncStorage.getItem("@harmonize_is_tester_mode");
       if (!cancelled) setIsTesterMode(testerMode === "true");
 
+      // Fetch real profiles
+      try {
+        const { getPotentialMatches } = await import('@services/supabase/user');
+        const realUsers = await getPotentialMatches(currentUser.id);
+
+        if (realUsers.length > 0) {
+          // Map real users to TestProfile format
+          const mappedProfiles: TestProfile[] = realUsers.map(user => ({
+            id: user.id,
+            name: user.display_name || user.username || 'Unknown',
+            age: user.age || 21,
+            bio: user.bio || 'No bio yet.',
+            image: user.profile_picture_url || 'https://via.placeholder.com/400',
+            profileType: 'neutral', // Default for real users
+            top_artists: user.top_artists || [],
+            top_genres: user.top_genres || [],
+            top_songs: user.top_songs || [],
+            // Default values for required TestProfile fields
+            pronouns: user.pronouns || 'they/them',
+            university: user.university || 'Unknown University',
+            universityVerified: !!user.is_verified,
+            concertsAttended: 0,
+            accountAgeMonths: 0,
+            mutualFriends: 0,
+            reviewsTypeA: [],
+            averageRatingTypeA: 0,
+            badgesTypeB: {
+              q1Badge: null,
+              q2Badge: null,
+              q3Badge: null,
+              harmonies: { count: 0, total: 0 }
+            },
+            totalReviews: 0
+          }));
+
+          // Combine with mock profiles (shuffle or prepend)
+          // For now, prepend real profiles so they show up first
+          if (!cancelled) {
+            setDisplayProfiles([...mappedProfiles, ...TEST_PROFILES]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching real profiles:', error);
+      }
+
       await initialize(currentUser.id);
       if (!cancelled) setProfileLoadTime(Date.now());
     }
@@ -66,7 +116,7 @@ export default function MatchScreen() {
     return () => {
       cancelled = true;
     };
-  }, [session, currentUser, initialize, router]);
+  }, [session, currentUser, initialize, router, setDisplayProfiles]);
 
   // ------------------------------------------------------------
   // EFFECT: Profile load time on index change
@@ -107,8 +157,8 @@ export default function MatchScreen() {
   // NEXT PROFILE (safe)
   // ------------------------------------------------------------
   const handleNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % TEST_PROFILES.length);
-  }, []);
+    setCurrentIndex((prev) => (prev + 1) % displayProfiles.length);
+  }, [displayProfiles.length]);
 
   // ------------------------------------------------------------
   // LIKE (creates real match)
@@ -128,7 +178,7 @@ export default function MatchScreen() {
       return;
     }
 
-    const p: TestProfile = TEST_PROFILES[currentIndex];
+    const p: TestProfile = displayProfiles[currentIndex];
 
     await trackDecision(
       p.id,
@@ -142,7 +192,7 @@ export default function MatchScreen() {
         userId: currentUser.id,
         testProfileId: p.id,
         name: p.name,
-        avatarUrl: "",
+        avatarUrl: p.image, // Use mapped image
         city: "",
         age: p.age,
         concertDate: "2025-12-15"
@@ -153,13 +203,13 @@ export default function MatchScreen() {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 
     slideToNext("right", handleNext);
-  }, [currentIndex, profileLoadTime, slideToNext, handleNext, currentUser, trackDecision]);
+  }, [currentIndex, profileLoadTime, slideToNext, handleNext, currentUser, trackDecision, displayProfiles]);
 
   // ------------------------------------------------------------
   // PASS
   // ------------------------------------------------------------
   const handlePass = useCallback(async () => {
-    const p = TEST_PROFILES[currentIndex];
+    const p = displayProfiles[currentIndex];
 
     await trackDecision(
       p.id,
@@ -169,13 +219,13 @@ export default function MatchScreen() {
     );
 
     slideToNext("left", handleNext);
-  }, [currentIndex, profileLoadTime, slideToNext, handleNext, trackDecision]);
+  }, [currentIndex, profileLoadTime, slideToNext, handleNext, trackDecision, displayProfiles]);
 
   // ------------------------------------------------------------
   // BLOCK
   // ------------------------------------------------------------
   const handleBlock = useCallback(async () => {
-    const p = TEST_PROFILES[currentIndex];
+    const p = displayProfiles[currentIndex];
 
     await trackDecision(
       p.id,
@@ -185,7 +235,7 @@ export default function MatchScreen() {
     );
 
     slideToNext("left", handleNext);
-  }, [currentIndex, profileLoadTime, slideToNext, handleNext, trackDecision]);
+  }, [currentIndex, profileLoadTime, slideToNext, handleNext, trackDecision, displayProfiles]);
 
   // ------------------------------------------------------------
   // RESET LIKES (tester only)
@@ -213,24 +263,7 @@ export default function MatchScreen() {
   // ------------------------------------------------------------
   // LOGOUT
   // ------------------------------------------------------------
-  const handleLogout = useCallback(() => {
-    Alert.alert(
-      "Logout",
-      "Are you sure?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Logout",
-          style: "destructive",
-          onPress: async () => {
-            const { signOut } = useUserStore.getState();
-            await signOut();
-            router.replace("/login");
-          },
-        },
-      ]
-    );
-  }, [router]);
+
 
   // ------------------------------------------------------------
   // RENDER
@@ -244,7 +277,7 @@ export default function MatchScreen() {
     );
   }
 
-  const currentProfile = TEST_PROFILES[currentIndex];
+  const currentProfile = displayProfiles[currentIndex];
 
   // Calculate match score
   const matchScore = currentUser ? calculateMatchScore(currentUser, currentProfile) : 0;
@@ -252,27 +285,11 @@ export default function MatchScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.profileCounter}>
-          <Text style={styles.counterText}>
-            Profile {currentIndex + 1} / {TEST_PROFILES.length}
-          </Text>
-
-          {!isTesterMode && variant && (
-            <Text style={[styles.counterText, { fontSize: 12, opacity: 0.6, marginTop: 4 }]}>
-              Variant {variant}
-            </Text>
-          )}
-        </View>
-
         {isTesterMode && (
           <TouchableOpacity onPress={resetLikes} style={styles.logoutButton}>
             <MaterialCommunityIcons name="refresh" size={24} color={COLORS.primary} />
           </TouchableOpacity>
         )}
-
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <MaterialCommunityIcons name="logout" size={24} color={COLORS.error} />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.cardContainer}>
