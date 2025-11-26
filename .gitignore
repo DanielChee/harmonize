@@ -52,6 +52,3 @@ scripts/
 # Markdown documentation files (except README.md)
 *.md
 !README.md
-
-# Verification Suite (Local Only)
-src/features/testing/VerificationSuite.ts
