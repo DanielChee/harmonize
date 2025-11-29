@@ -20,6 +20,7 @@ export const ProfilePictureStep: React.FC<ProfilePictureStepProps> = ({
   formData,
   updateFormData,
 }) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isUploading, setIsUploading] = useState(false);
 
   const requestPermissions = async () => {

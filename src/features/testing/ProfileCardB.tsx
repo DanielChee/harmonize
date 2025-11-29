@@ -54,8 +54,6 @@ const MOCK_CONCERT_HISTORY = [
   { id: '3', artist: 'boygenius', venue: 'State Farm Arena', date: 'Aug 2024', image: 'https://i.pravatar.cc/300?img=53' },
 ];
 
-const MOCK_SPOTIFY_HOURS = 45234;
-
 /**
  * Featured Song Component
  */
@@ -95,6 +93,11 @@ const ConcertHistoryItem: React.FC<{ concert: typeof MOCK_CONCERT_HISTORY[0] }> 
   );
 };
 
+// Helper to validate URLs
+const isValidUrl = (url: string | undefined | null): boolean => {
+  return !!url && typeof url === 'string' && url.trim().length > 0 && (url.startsWith('http') || url.startsWith('file://'));
+};
+
 export function ProfileCardB({
   profile,
   profilePictureUrl,
@@ -107,40 +110,75 @@ export function ProfileCardB({
   concertTransport,
 }: ProfileCardBProps) {
   const { badgesTypeB } = profile;
+  const isTestProfile = profile.id.startsWith('test-');
 
-  // Use real data if provided, otherwise use MOCK data
-  const spotifyGenres = topGenres && topGenres.length > 0 ? topGenres : MOCK_SPOTIFY_DATA.top_genres;
-  const spotifyArtists = topArtists && topArtists.length > 0
-    ? topArtists.map((name, index) => ({
-      id: String(index + 1),
-      name,
-      image_url: `https://i.pravatar.cc/300?img=${51 + index}`
-    }))
-    : MOCK_SPOTIFY_DATA.top_artists;
-  const spotifyTracks = topSongs && topSongs.length > 0
-    ? topSongs.map((songString, index) => {
-      const [name, ...artistParts] = songString.split(' - ');
-      const artist = artistParts.join(' - ') || 'Unknown Artist';
-      return {
+  // Use real data for real users, fallback to MOCK only for test profiles
+  const spotifyGenres = isTestProfile 
+    ? (topGenres && topGenres.length > 0 ? topGenres : MOCK_SPOTIFY_DATA.top_genres)
+    : (topGenres || []);
+  
+  const spotifyArtists = isTestProfile
+    ? (topArtists && topArtists.length > 0
+      ? topArtists.map((name, index) => ({
         id: String(index + 1),
-        name: name || songString,
-        artist,
-        image_url: `https://i.pravatar.cc/300?img=${54 + index}`,
-        duration_ms: 200000, // Default duration
-      };
-    })
-    : MOCK_SPOTIFY_DATA.top_tracks;
-  const featuredTrack = spotifyTracks[0] || MOCK_SPOTIFY_DATA.featured_track;
+        name,
+        image_url: `https://i.pravatar.cc/300?img=${51 + index}`
+      }))
+      : MOCK_SPOTIFY_DATA.top_artists)
+    : (topArtists || []).map((name, index) => ({
+        id: String(index + 1),
+        name,
+        image_url: (profile.artist_images && isValidUrl(profile.artist_images[index])) 
+          ? profile.artist_images[index] 
+          : undefined // No placeholder for real users if missing
+      }));
+
+  const spotifyTracks = isTestProfile
+    ? (topSongs && topSongs.length > 0
+      ? topSongs.map((songString, index) => {
+        const [name, ...artistParts] = songString.split(' - ');
+        const artist = artistParts.join(' - ') || 'Unknown Artist';
+        return {
+          id: String(index + 1),
+          name: name || songString,
+          artist,
+          image_url: `https://i.pravatar.cc/300?img=${54 + index}`,
+          duration_ms: 200000,
+        };
+      })
+      : MOCK_SPOTIFY_DATA.top_tracks)
+    : (topSongs || []).map((songString, index) => {
+        const [name, ...artistParts] = songString.split(' - ');
+        const artist = artistParts.join(' - ') || 'Unknown Artist';
+        return {
+          id: String(index + 1),
+          name: name || songString,
+          artist,
+          image_url: (profile.song_images && isValidUrl(profile.song_images[index]))
+            ? profile.song_images[index]
+            : undefined, // No placeholder for real users
+          duration_ms: 0, 
+        };
+      });
+
+  const featuredTrack = isTestProfile 
+    ? (spotifyTracks[0] || MOCK_SPOTIFY_DATA.featured_track)
+    : (spotifyTracks[0] || null); // Real users might not have a track
+
   const concertsCount = concertsAttended !== undefined ? concertsAttended : profile.concertsAttended;
   const isUniversityVerified = profile.universityVerified && profile.university && profile.university !== 'Not specified';
+
+  // Resolve profile image - prioritize prop, then profile.image, then placeholder
+  const resolvedProfileImage = isValidUrl(profilePictureUrl) ? profilePictureUrl : 
+                               isValidUrl(profile.image) ? profile.image : null;
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header with Mutual Friends */}
       <View style={styles.header}>
         <View style={styles.avatar}>
-          {profilePictureUrl || profile.image ? (
-            <Image source={{ uri: profilePictureUrl || profile.image }} style={styles.avatarImage} />
+          {resolvedProfileImage ? (
+            <Image source={{ uri: resolvedProfileImage }} style={styles.avatarImage} />
           ) : (
             <Text style={styles.avatarText}>{profile.name[0]}</Text>
           )}
@@ -209,75 +247,79 @@ export function ProfileCardB({
       </Card>
 
       {/* Featured Song */}
-      <Card style={styles.section}>
-        <FeaturedSong track={featuredTrack} />
-      </Card>
+      {featuredTrack && (
+        <Card style={styles.section}>
+          <FeaturedSong track={featuredTrack} />
+        </Card>
+      )}
 
       {/* Music Stats */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>My Music Stats</Text>
-        <View style={styles.spotifyHours}>
-          <MaterialIcons name="music-note" size={20} color={COLORS.text.primary} />
-          <Text style={styles.spotifyHoursText}>
-            Spotify Hours: {MOCK_SPOTIFY_HOURS.toLocaleString()}
-          </Text>
-        </View>
-        <View style={styles.genresSection}>
-          <Text style={styles.subsectionTitle}>Top Genres</Text>
-          <View style={styles.genresList}>
-            {spotifyGenres.map((genre, index) => (
-              <View key={`${genre}-${index}`} style={styles.genreBorderedTag}>
-                <Text style={styles.genreTagText}>{genre}</Text>
+      {spotifyGenres.length > 0 && (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>My Music Stats</Text>
+          <View style={styles.genresSection}>
+            <Text style={styles.subsectionTitle}>Top Genres</Text>
+            <View style={styles.genresList}>
+              {spotifyGenres.map((genre, index) => (
+                <View key={`${genre}-${index}`} style={styles.genreBorderedTag}>
+                  <Text style={styles.genreTagText}>{genre}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </Card>
+      )}
+
+      {/* Top Artists */}
+      {spotifyArtists.length > 0 && (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Top Artists</Text>
+          <View style={styles.artistsList}>
+            {spotifyArtists.map((artist) => (
+              <View key={artist.id} style={styles.artistItem}>
+                <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
+                <Text style={styles.artistName} numberOfLines={2}>{artist.name}</Text>
               </View>
             ))}
           </View>
-        </View>
-      </Card>
-
-      {/* Top Artists */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Top Artists</Text>
-        <View style={styles.artistsList}>
-          {spotifyArtists.map((artist) => (
-            <View key={artist.id} style={styles.artistItem}>
-              <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
-              <Text style={styles.artistName} numberOfLines={2}>{artist.name}</Text>
-            </View>
-          ))}
-        </View>
-      </Card>
+        </Card>
+      )}
 
       {/* Top Tracks */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Top Tracks</Text>
-        {spotifyTracks.map((track, index) => (
-          <View key={track.id} style={styles.trackItem}>
-            <Text style={styles.trackNumber}>{index + 1}</Text>
-            <Image source={{ uri: track.image_url }} style={styles.trackImage} />
-            <View style={styles.trackInfo}>
-              <Text style={styles.trackName} numberOfLines={1}>{track.name}</Text>
-              <Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
+      {spotifyTracks.length > 0 && (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Top Tracks</Text>
+          {spotifyTracks.map((track, index) => (
+            <View key={track.id} style={styles.trackItem}>
+              <Text style={styles.trackNumber}>{index + 1}</Text>
+              <Image source={{ uri: track.image_url }} style={styles.trackImage} />
+              <View style={styles.trackInfo}>
+                <Text style={styles.trackName} numberOfLines={1}>{track.name}</Text>
+                <Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
+              </View>
+              <View style={styles.trackDuration}>
+                <Text style={styles.trackDurationText}>
+                  {Math.floor(track.duration_ms / 60000)}:
+                  {String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}
+                </Text>
+              </View>
             </View>
-            <View style={styles.trackDuration}>
-              <Text style={styles.trackDurationText}>
-                {Math.floor(track.duration_ms / 60000)}:
-                {String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}
-              </Text>
-            </View>
-          </View>
-        ))}
-      </Card>
-
-      {/* Concert History */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Concert History</Text>
-        <Text style={styles.subsectionTitle}>Recently Attended Shows</Text>
-        <View style={styles.concertHistoryGrid}>
-          {MOCK_CONCERT_HISTORY.map((concert) => (
-            <ConcertHistoryItem key={concert.id} concert={concert} />
           ))}
-        </View>
-      </Card>
+        </Card>
+      )}
+
+      {/* Concert History - Only show for test profiles or if we have real data (future) */}
+      {profile.id.startsWith('test-') && (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Concert History</Text>
+          <Text style={styles.subsectionTitle}>Recently Attended Shows</Text>
+          <View style={styles.concertHistoryGrid}>
+            {MOCK_CONCERT_HISTORY.map((concert) => (
+              <ConcertHistoryItem key={concert.id} concert={concert} />
+            ))}
+          </View>
+        </Card>
+      )}
 
       {/* Credentials */}
       <Card style={styles.section}>

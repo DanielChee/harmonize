@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
-import { Card } from '@components';
+import { Card } from '../common/Card';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 

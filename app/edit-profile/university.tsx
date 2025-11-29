@@ -14,7 +14,6 @@ export default function EditUniversityScreen() {
         university: '',
         academic_field: '',
         academic_year: '',
-        student_email: '',
     });
 
     useEffect(() => {
@@ -23,7 +22,6 @@ export default function EditUniversityScreen() {
                 university: currentUser.university || '',
                 academic_field: currentUser.academic_field || '',
                 academic_year: currentUser.academic_year || '',
-                student_email: '', // Don't pre-fill email for privacy/security re-verification
             });
         }
     }, [currentUser]);
@@ -50,6 +48,7 @@ export default function EditUniversityScreen() {
                 { text: 'OK', onPress: () => router.back() }
             ]);
         } catch (error) {
+            console.error('Error updating university info:', error);
             Alert.alert('Error', 'Failed to update university info');
         } finally {
             setIsLoading(false);

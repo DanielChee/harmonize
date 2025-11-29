@@ -3,7 +3,7 @@
  * This is the entry point when app launches
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import { COLORS } from '@constants';
@@ -14,11 +14,7 @@ export default function Index() {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
 
-  useEffect(() => {
-    checkLoginStatus();
-  }, []);
-
-  const checkLoginStatus = async () => {
+  const checkLoginStatus = useCallback(async () => {
     try {
       // Check for Supabase session
       const session = await getSession();
@@ -49,7 +45,11 @@ export default function Index() {
     } finally {
       setIsChecking(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    checkLoginStatus();
+  }, [checkLoginStatus]);
 
   if (isChecking) {
     return (

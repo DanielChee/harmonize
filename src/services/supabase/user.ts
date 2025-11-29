@@ -1,15 +1,15 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SecureStoreAdapter } from "../../lib/secureStore"; // Use SecureStoreAdapter for secure storage
 import type { User } from "@types";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "./supabase";
 
 export async function getOrCreateUser() {
-  let userId = await AsyncStorage.getItem("userId");
+  let userId = await SecureStoreAdapter.getItem("userId");
 
   if (!userId) {
     userId = uuidv4();
-    await AsyncStorage.setItem("userId", userId);
+    await SecureStoreAdapter.setItem("userId", userId);
 
     // Note: Profile will be created when user completes Spotify OAuth or profile setup
     // No automatic placeholder profile created
@@ -197,20 +197,28 @@ export async function deleteProfile(userId: string): Promise<boolean> {
 }
 
 /**
- * Get potential matches (all users except current user)
+ * Get potential matches using server-side matching logic
  */
 export async function getPotentialMatches(currentUserId: string): Promise<User[]> {
   try {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .neq("id", currentUserId) // Exclude current user
-      .order("created_at", { ascending: false })
-      .limit(20); // Limit to 20 for now
+    const { data, error } = await supabase.rpc('get_potential_matches', {
+      requesting_user_id: currentUserId,
+      limit_count: 20
+    });
 
     if (error) {
-      console.error("Error fetching potential matches:", error);
-      return [];
+      // Fallback to basic fetch if RPC fails (e.g. function doesn't exist yet)
+      console.warn("RPC get_potential_matches failed, falling back to basic fetch:", error.message);
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("profiles")
+        .select("*")
+        .neq("id", currentUserId)
+        .eq("profile_complete", true)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (fallbackError) throw fallbackError;
+      return fallbackData as User[];
     }
 
     return data as User[];

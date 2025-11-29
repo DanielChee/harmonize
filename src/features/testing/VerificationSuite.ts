@@ -15,6 +15,8 @@ export const VERIFICATION_TESTS = [
     { id: 'auth_session', name: 'Auth Session Persistence' },
     { id: 'db_connection', name: 'Supabase Connection' },
     { id: 'db_write_read', name: 'Database Write/Read Cycle' },
+    { id: 'profile_fetch_success_rate', name: 'Profile Fetch Success Rate' },
+    { id: 'image_load_success_rate', name: 'Image Load Success Rate' },
     { id: 'local_storage', name: 'AsyncStorage Operations' },
     { id: 'match_logic', name: 'Match Score Calculation' },
     { id: 'spotify_images', name: 'Spotify Image Persistence' },
@@ -69,6 +71,12 @@ export class VerificationSuite {
                     break;
                 case 'db_write_read':
                     await this.testDbWriteRead();
+                    break;
+                case 'profile_fetch_success_rate':
+                    await this.testProfileFetchSuccessRate();
+                    break;
+                case 'image_load_success_rate':
+                    await this.testImageLoadSuccessRate();
                     break;
                 case 'local_storage':
                     await this.testLocalStorage();
@@ -142,6 +150,73 @@ export class VerificationSuite {
             .eq('id', user.id);
 
         if (writeError) throw writeError;
+    }
+
+    private async testProfileFetchSuccessRate() {
+        const SAMPLE_SIZE = 10;
+        // Fetch a batch of profiles
+        const { data: profiles, error } = await supabase
+            .from('profiles')
+            .select('id, username, display_name')
+            .limit(SAMPLE_SIZE);
+
+        if (error) throw error;
+        if (!profiles || profiles.length === 0) {
+            throw new Error('No profiles found to test.');
+        }
+
+        let successCount = 0;
+        profiles.forEach(p => {
+            if (p.id && (p.username || p.display_name)) {
+                successCount++;
+            }
+        });
+
+        const rate = (successCount / profiles.length) * 100;
+        if (rate < 100) {
+            throw new Error(`Success rate: ${rate}% (${successCount}/${profiles.length} valid)`);
+        }
+        // If 100%, the generic 'Passed' message will be used, or we can override here if we want specific text.
+        this.updateResult('profile_fetch_success_rate', { message: `100% (${profiles.length} checked)` });
+    }
+
+    private async testImageLoadSuccessRate() {
+        const SAMPLE_SIZE = 5;
+        const { data: profiles, error } = await supabase
+            .from('profiles')
+            .select('profile_picture_url')
+            .not('profile_picture_url', 'is', null)
+            .limit(SAMPLE_SIZE);
+
+        if (error) throw error;
+        if (!profiles || profiles.length === 0) {
+            // Not necessarily a failure if no images exist yet, but notable
+            this.updateResult('image_load_success_rate', { message: 'Skipped (no images)' });
+            return;
+        }
+
+        let successCount = 0;
+        const checkPromises = profiles.map(async (p) => {
+            try {
+                if (!p.profile_picture_url) return false;
+                const response = await fetch(p.profile_picture_url, { method: 'HEAD' });
+                return response.ok;
+            } catch {
+                return false;
+            }
+        });
+
+        const results = await Promise.all(checkPromises);
+        successCount = results.filter(r => r).length;
+
+        const rate = (successCount / profiles.length) * 100;
+        
+        const message = `${rate}% Success (${successCount}/${profiles.length})`;
+        if (rate < 80) { // Threshold for failure/warning
+             throw new Error(`Low success rate: ${message}`);
+        }
+        
+        this.updateResult('image_load_success_rate', { message });
     }
 
     private async testLocalStorage() {

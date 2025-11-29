@@ -1,14 +1,17 @@
 import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
-import type { MockUser, Review } from '@utils/mockMeets';
+import { getBadgesFromReview, type Review } from '@utils/mockMeets';
 import React, { useState } from 'react';
-import { Image, Linking, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Linking, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import type { MatchedUser } from '../../features/meet';
 
 export default function ConversationListItem({
   matchedUser,
   onSubmitReview,
+  onUnmatch,
 }: {
-  matchedUser: MockUser;
+  matchedUser: MatchedUser;
   onSubmitReview: (id: string, review: Review) => void;
+  onUnmatch: (id: string) => void;
 }) {
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -22,6 +25,24 @@ export default function ConversationListItem({
 
   const concertDate = new Date(matchedUser.concertDate);
   const isFuture = concertDate > new Date();
+
+  const handleUnmatch = () => {
+    Alert.alert(
+      "Unmatch",
+      `Are you sure you want to unmatch with ${matchedUser.name}? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Unmatch",
+          style: "destructive",
+          onPress: () => {
+            onUnmatch(matchedUser.id);
+            setModalVisible(false);
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <>
@@ -37,7 +58,23 @@ export default function ConversationListItem({
           <Text style={styles.dateText}>{matchedUser.concertDate}</Text>
 
           {matchedUser.review ? (
-            <Text style={styles.reviewed}>Reviewed</Text>
+            <View style={styles.reviewSummary}>
+              <Text style={styles.reviewed}>Reviewed</Text>
+              <View style={styles.badgeContainer}>
+                {getBadgesFromReview(matchedUser.review).q1Badge && (
+                  <Text style={styles.badgeText}>{getBadgesFromReview(matchedUser.review).q1Badge?.emoji}</Text>
+                )}
+                {getBadgesFromReview(matchedUser.review).q2Badge && (
+                  <Text style={styles.badgeText}>{getBadgesFromReview(matchedUser.review).q2Badge?.emoji}</Text>
+                )}
+                {getBadgesFromReview(matchedUser.review).q3Badge && (
+                  <Text style={styles.badgeText}>{getBadgesFromReview(matchedUser.review).q3Badge?.emoji}</Text>
+                )}
+                {matchedUser.review.wouldMeetAgain && (
+                  <Text style={styles.badgeText}>🤝</Text>
+                )}
+              </View>
+            </View>
           ) : isFuture ? (
             <Text style={styles.future}>Concert upcoming</Text>
           ) : (
@@ -148,6 +185,11 @@ export default function ConversationListItem({
             <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
               <Text style={styles.closeText}>Close</Text>
             </TouchableOpacity>
+
+            {/* Unmatch Button */}
+            <TouchableOpacity onPress={handleUnmatch} style={styles.unmatchButton}>
+              <Text style={styles.unmatchText}>Unmatch</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -199,4 +241,27 @@ const styles = StyleSheet.create({
 
   textButton: { backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 18, borderRadius: 8, marginTop: SPACING.sm },
   textButtonText: { color: COLORS.text.inverse, fontWeight: TYPOGRAPHY.weights.semibold },
+
+  reviewSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: SPACING.xs,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    gap: 4,
+    marginLeft: SPACING.sm,
+  },
+  badgeText: {
+    fontSize: TYPOGRAPHY.sizes.base,
+  },
+  unmatchButton: {
+    marginTop: SPACING.lg,
+    padding: SPACING.sm,
+  },
+  unmatchText: {
+    color: COLORS.error,
+    fontSize: TYPOGRAPHY.sizes.sm,
+    fontWeight: TYPOGRAPHY.weights.medium,
+  }
 });

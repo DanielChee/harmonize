@@ -43,8 +43,6 @@ const MOCK_CONCERT_HISTORY = [
   { id: '3', artist: 'boygenius', venue: 'State Farm Arena', date: 'Aug 2024', image: 'https://i.pravatar.cc/300?img=53' },
 ];
 
-const MOCK_SPOTIFY_HOURS = 45234;
-
 /**
  * Featured Song Component
  */
@@ -167,12 +165,6 @@ export function ProfileCardA({ profile }: ProfileCardAProps) {
       {/* Music Stats */}
       <Card style={styles.section}>
         <Text style={styles.sectionTitle}>My Music Stats</Text>
-        <View style={styles.spotifyHours}>
-          <MaterialIcons name="music-note" size={20} color={COLORS.text.primary} />
-          <Text style={styles.spotifyHoursText}>
-            Spotify Hours: {MOCK_SPOTIFY_HOURS.toLocaleString()}
-          </Text>
-        </View>
         <View style={styles.genresSection}>
           <Text style={styles.subsectionTitle}>Top Genres</Text>
           <View style={styles.genresList}>

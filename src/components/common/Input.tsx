@@ -11,10 +11,11 @@ interface InputProps {
   onChangeText: (text: string) => void;
   error?: string;
   disabled?: boolean;
+  editable?: boolean; // Add explicit editable prop
   multiline?: boolean;
   numberOfLines?: number;
   maxLength?: number;
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'number-pad'; // Add number-pad
   secureTextEntry?: boolean;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   autoCorrect?: boolean;
@@ -32,6 +33,7 @@ export const Input: React.FC<InputProps> = ({
   onChangeText,
   error,
   disabled = false,
+  editable = true, // Default to true
   multiline = false,
   numberOfLines = 1,
   maxLength,
@@ -52,6 +54,9 @@ export const Input: React.FC<InputProps> = ({
     onFocus?.();
   };
 
+  // Determine if input is effectively disabled
+  const isEffectiveDisabled = disabled || !editable;
+
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -59,7 +64,7 @@ export const Input: React.FC<InputProps> = ({
         styles.inputContainer,
         isFocused && styles.focused,
         error && styles.error,
-        disabled && styles.disabled,
+        isEffectiveDisabled && styles.disabled,
       ]}>
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
         <TextInput
@@ -72,7 +77,7 @@ export const Input: React.FC<InputProps> = ({
           placeholder={placeholder}
           value={value}
           onChangeText={onChangeText}
-          editable={!disabled}
+          editable={!isEffectiveDisabled}
           multiline={multiline}
           numberOfLines={multiline ? numberOfLines : 1}
           maxLength={maxLength}

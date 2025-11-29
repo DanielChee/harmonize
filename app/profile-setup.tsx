@@ -10,7 +10,7 @@ import { getSession } from '@services/supabase/auth';
 import { getUserProfile, updateUserProfile } from '@services/supabase/user';
 import { useUserStore } from '@store';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -32,12 +32,6 @@ export default function ProfileSetupScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-
-  // Track timing for profile creation
-  const profileCreationStartTime = useRef<number | null>(null);
-
-  // Track last field that was updated
-  const lastFieldUpdated = useRef<string | null>(null);
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -69,14 +63,18 @@ export default function ProfileSetupScreen() {
     university: '',
     academic_field: '',
     academic_year: '',
-    student_email: '',
   });
 
-  useEffect(() => {
-    loadUserProfile();
-  }, []);
+  console.log('Current Step:', currentStep);
+  console.log('Current Form Data:', JSON.stringify(formData, null, 2));
 
-  const loadUserProfile = async () => {
+  // Track timing for profile creation
+  const profileCreationStartTime = useRef<number | null>(null);
+
+  // Track last field that was updated
+  const lastFieldUpdated = useRef<string | null>(null);
+
+  const loadUserProfile = useCallback(async () => {
     try {
       setIsLoading(true);
       const userSession = session || await getSession();
@@ -102,8 +100,18 @@ export default function ProfileSetupScreen() {
           top_genres: profile.top_genres || [],
           top_artists: profile.top_artists || [],
           top_songs: profile.top_songs || [],
-          artist_images: profile.artist_images || [],
-          song_images: profile.song_images || [],
+          artist_images: (profile.top_artists && profile.artist_images)
+            ? profile.top_artists.map((name, i) => ({
+                name,
+                url: profile.artist_images![i] || ''
+              }))
+            : [],
+          song_images: (profile.top_songs && profile.song_images)
+            ? profile.top_songs.map((name, i) => ({
+                name,
+                url: profile.song_images![i] || ''
+              }))
+            : [],
           sprint_5_variant: profile.sprint_5_variant,
           profile_picture_url: profile.profile_picture_url || '',
           concert_budget: profile.concert_budget || '',
@@ -112,7 +120,6 @@ export default function ProfileSetupScreen() {
           university: '',
           academic_field: '',
           academic_year: '',
-          student_email: '',
         });
       }
     } catch (error) {
@@ -121,7 +128,11 @@ export default function ProfileSetupScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router, session, setSession, setCurrentUser]);
+
+  useEffect(() => {
+    loadUserProfile();
+  }, [loadUserProfile]);
 
   // Start timing on first field interaction
   const startTimingIfNeeded = () => {
@@ -219,7 +230,6 @@ export default function ProfileSetupScreen() {
     if (formData.university.trim()) count++;
     if (formData.academic_field.trim()) count++;
     if (formData.academic_year.trim()) count++;
-    if (formData.student_email.trim()) count++;
 
     return count;
   };
@@ -243,7 +253,6 @@ export default function ProfileSetupScreen() {
       university: 'University',
       academic_field: 'Academic Field',
       academic_year: 'Academic Year',
-      student_email: 'Student Email',
     };
     return fieldNames[fieldKey] || fieldKey;
   };
@@ -382,8 +391,8 @@ export default function ProfileSetupScreen() {
         top_genres: formData.top_genres.length > 0 ? formData.top_genres : undefined,
         top_artists: formData.top_artists.length > 0 ? formData.top_artists : undefined,
         top_songs: formData.top_songs.length > 0 ? formData.top_songs : undefined,
-        artist_images: formData.artist_images.length > 0 ? formData.artist_images : undefined,
-        song_images: formData.song_images.length > 0 ? formData.song_images : undefined,
+        artist_images: formData.artist_images.length > 0 ? formData.artist_images.map(img => img.url) : undefined,
+        song_images: formData.song_images.length > 0 ? formData.song_images.map(img => img.url) : undefined,
         sprint_5_variant: formData.sprint_5_variant,
         profile_picture_url: cleanOptionalValue(formData.profile_picture_url),
         concert_budget: cleanOptionalValue(formData.concert_budget),
@@ -436,7 +445,7 @@ export default function ProfileSetupScreen() {
         return;
       }
 
-      alert(`Failed to save profile: ${errorMessage}. Please try again.`);
+      Alert.alert('Save Failed', `Failed to save profile: ${errorMessage}. Please try again.`);
       setIsSaving(false);
     }
   };
@@ -562,6 +571,7 @@ export default function ProfileSetupScreen() {
           <UniversityVerificationStep
             formData={formData}
             updateFormData={updateFormData}
+            isVerified={currentUser?.is_verified}
           />
         )}
       </ScrollView>

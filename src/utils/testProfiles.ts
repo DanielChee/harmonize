@@ -116,7 +116,9 @@ export const TEST_PROFILE_ALEX: TestProfile = {
   // Music Data
   top_genres: ['Indie Rock', 'Alternative', 'Dream Pop', 'Shoegaze'],
   top_artists: ['Tame Impala', 'Beach House', 'Phoebe Bridgers', 'The Strokes', 'Vampire Weekend'],
-
+  top_songs: [],
+  artist_images: [],
+  song_images: [],
 };
 
 // JORDAN – Hip-Hop/R&B, more balanced (neutral)
@@ -134,56 +136,7 @@ export const TEST_PROFILE_JORDAN: TestProfile = {
   mutualFriends: 0,
   bio: "ATL native and hip-hop head 🎤 Looking for concert buddies who appreciate real lyricism. Let's hit up State Farm Arena or catch some shows at The Tabernacle!",
 
-  reviewsTypeA: [
-    {
-      type: 'A',
-      stars: 5,
-      comment: 'Jordan knew every word and kept the energy high without being overwhelming. Super fun if you like hype crowds.',
-      reviewerName: 'Alex T.',
-      reviewerAvatar: 'https://i.pravatar.cc/300?img=11',
-      daysAgo: 4,
-    },
-    {
-      type: 'A',
-      stars: 4,
-      comment: 'Great company and really passionate about the artists. Talked a lot about production and lyrics which I enjoyed.',
-      reviewerName: 'Sam J.',
-      reviewerAvatar: 'https://i.pravatar.cc/300?img=15',
-      daysAgo: 9,
-    },
-    {
-      type: 'A',
-      stars: 3,
-      comment: 'Fun overall, but wanted to stay for the very last song + after-party when I was ready to head out earlier.',
-      reviewerName: 'Morgan L.',
-      reviewerAvatar: 'https://i.pravatar.cc/300?img=19',
-      daysAgo: 13,
-    },
-    {
-      type: 'A',
-      stars: 4,
-      comment: 'On time, easy to coordinate with, and knew the venue layout. Ideal if you like being near the front.',
-      reviewerName: 'Chris P.',
-      reviewerAvatar: 'https://i.pravatar.cc/300?img=22',
-      daysAgo: 20,
-    },
-    {
-      type: 'A',
-      stars: 5,
-      comment: 'We ended up talking for an hour after the show about favorite albums. Great if you love deep music convos.',
-      reviewerName: 'Lena R.',
-      reviewerAvatar: 'https://i.pravatar.cc/300?img=29',
-      daysAgo: 27,
-    },
-    {
-      type: 'A',
-      stars: 3,
-      comment: 'Good vibes but a bit focused on getting videos for social. Still had a solid time overall.',
-      reviewerName: 'Taylor S.',
-      reviewerAvatar: 'https://i.pravatar.cc/300?img=34',
-      daysAgo: 33,
-    },
-  ],
+  reviewsTypeA: [],
 
   averageRatingTypeA: 4.0,
   totalReviews: 6,
@@ -198,7 +151,9 @@ export const TEST_PROFILE_JORDAN: TestProfile = {
   // Music Data
   top_genres: ['Hip Hop', 'R&B', 'Trap', 'Rap'],
   top_artists: ['Kendrick Lamar', 'J. Cole', 'Drake', 'SZA', 'Frank Ocean'],
-
+  top_songs: [],
+  artist_images: [],
+  song_images: [],
 };
 
 // TAYLOR – Pop/EDM, very strong social/energy presence (positive)
@@ -288,7 +243,9 @@ export const TEST_PROFILE_TAYLOR: TestProfile = {
   // Music Data
   top_genres: ['Pop', 'EDM', 'Dance Pop', 'Electropop'],
   top_artists: ['Taylor Swift', 'Dua Lipa', 'Ariana Grande', 'Calvin Harris', 'The Chainsmokers'],
-
+  top_songs: [],
+  artist_images: [],
+  song_images: [],
 };
 
 // Export array for easy cycling

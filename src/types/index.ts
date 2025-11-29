@@ -34,8 +34,8 @@ export interface User {
   top_genres?: string[]; // Top music genres
   top_artists?: string[]; // Top artists (artist names)
   top_songs?: string[]; // Top songs (format: "Song Name - Artist Name")
-  artist_images?: { name: string; url: string }[]; // JSON array of artist images
-  song_images?: { name: string; url: string }[]; // JSON array of song images
+  artist_images?: string[]; // Array of artist image URLs
+  song_images?: string[]; // Array of song image URLs
   sprint_5_variant?: 'variant_a' | 'variant_b'; // Variant A = Manual Input, Variant B = From Spotify
 
   // Preferences

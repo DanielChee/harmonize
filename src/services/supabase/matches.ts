@@ -78,3 +78,31 @@ export async function fetchMatchesForUser(userId: string): Promise<MatchRow[]> {
 
   return (data || []) as MatchRow[];
 }
+
+export async function deleteMatch(matchId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('matches')
+    .delete()
+    .eq('id', matchId);
+
+  if (error) {
+    console.error('[Matches] deleteMatch error', error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function updateMatchReview(matchRowId: string, review: Review): Promise<boolean> {
+  const { error } = await supabase
+    .from('matches')
+    .update({ review: review, reviewed: true })
+    .eq('id', matchRowId);
+
+  if (error) {
+    console.error('[Matches] updateMatchReview error', error);
+    return false;
+  }
+
+  return true;
+}

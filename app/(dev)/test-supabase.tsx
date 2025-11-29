@@ -14,8 +14,6 @@ import { supabase } from "@services/supabase";
 import { logoutFromSpotify } from "@services/spotify";
 import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
-import 'react-native-get-random-values';
-import { v4 as uuidv4 } from "uuid";
 import type { SpotifyData } from "@types";
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -38,7 +36,7 @@ export default function TestSupabase() {
     try {
       // Test Supabase connection without creating test users
       // Just query to check if the connection works
-      const { data, error: fetchError } = await supabase
+      const { error: fetchError } = await supabase
         .from("profiles")
         .select("count");
 

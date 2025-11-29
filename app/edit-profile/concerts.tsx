@@ -5,6 +5,7 @@ import { COLORS, SPACING } from '@constants';
 import { Button } from '@components';
 import { ConcertPreferencesStep } from '@features/profile-setup/ConcertPreferencesStep';
 import { useUserStore } from '@store';
+import { updateUserProfile } from '@services/supabase/user';
 
 export default function EditConcertsScreen() {
     const router = useRouter();
@@ -35,12 +36,9 @@ export default function EditConcertsScreen() {
 
         setIsLoading(true);
         try {
-            // Update local store (simulated)
-            if (currentUser) {
-                const updatedUser = {
-                    ...currentUser,
-                    ...formData,
-                };
+            const updatedUser = await updateUserProfile(session.user.id, formData);
+
+            if (updatedUser) {
                 setCurrentUser(updatedUser);
             }
 
@@ -48,6 +46,7 @@ export default function EditConcertsScreen() {
                 { text: 'OK', onPress: () => router.back() }
             ]);
         } catch (error) {
+            console.error('Error updating preferences:', error);
             Alert.alert('Error', 'Failed to update preferences');
         } finally {
             setIsLoading(false);

@@ -4,12 +4,14 @@
  * Can auto-populate from Spotify if connected, or allow manual input
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { COLORS, SPACING, TYPOGRAPHY, MUSIC_GENRES } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SpotifyButton } from '@components/SpotifyButton';
-import { fetchAllSpotifyData, searchArtists, searchTracks, isAuthenticated } from '@services/spotify';
+import { fetchAllSpotifyData, searchArtists, searchTracks, isAuthenticated, logoutFromSpotify } from '@services/spotify';
+import { uploadSpotifyImageBatch } from '@services/supabase/storage';
+import { useUserStore } from '@store';
 import type { SpotifyData } from '@types';
 import { Input } from '@components/common/Input';
 
@@ -29,29 +31,30 @@ const MAX_GENRES = 5;
 const MAX_ARTISTS = 5;
 const MAX_SONGS = 5;
 
-type InputMode = 'manual' | 'spotify';
 
 export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
   formData,
   updateFormData,
 }) => {
-  // Initialize input mode based on existing variant
-  // Variant A = Manual, Variant B = Spotify
-  const [inputMode, setInputMode] = useState<InputMode>(
-    formData.sprint_5_variant === 'variant_b' ? 'spotify' : 'manual'
-  );
+  const { session } = useUserStore();
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
   const [isLoadingSpotify, setIsLoadingSpotify] = useState(false);
-  const [spotifyData, setSpotifyData] = useState<SpotifyData | null>(null);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_spotifyData, _setSpotifyData] = useState<SpotifyData | null>(null);
 
   // Manual input states
   const [artistSearchQuery, setArtistSearchQuery] = useState('');
   const [trackSearchQuery, setTrackSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{
-    artists: Array<{ id: string; name: string; image_url?: string }>;
-    tracks: Array<{ id: string; name: string; artist: string; image_url?: string }>;
+    artists: { id: string; name: string; image_url?: string }[];
+    tracks: { id: string; name: string; artist: string; image_url?: string }[];
   }>({ artists: [], tracks: [] });
   const [isSearching, setIsSearching] = useState(false);
+
+  const handleSpotifyError = (error: any) => {
+    console.error('Spotify connection error:', error);
+  };
 
   // Store image URLs for artists and songs
   // We initialize from formData if available
@@ -80,126 +83,113 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     try {
       const connected = await isAuthenticated();
       setIsSpotifyConnected(connected);
-    } catch (error) {
+    } catch {
       setIsSpotifyConnected(false);
     }
   };
 
+
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const loadSpotifyData = async () => {
     try {
       setIsLoadingSpotify(true);
       const data = await fetchAllSpotifyData();
-      setSpotifyData(data);
-
-      // Auto-populate form with Spotify data
-      const genresToSet = data.top_genres?.slice(0, MAX_GENRES) || [];
-
-      const artists = data.top_artists.slice(0, MAX_ARTISTS);
-      const tracks = data.top_tracks.slice(0, MAX_SONGS);
-
-      // Construct image arrays
-      const newArtistImagesList = artists
-        .filter(a => a.image_url)
-        .map(a => ({ name: a.name, url: a.image_url! }));
-
-      const newSongImagesList = tracks
-        .filter(t => t.image_url)
-        .map(t => ({ name: `${t.name} - ${t.artist}`, url: t.image_url! }));
-
-      updateFormData({
-        top_genres: genresToSet,
-        top_artists: artists.map(a => a.name),
-        top_songs: tracks.map(t => `${t.name} - ${t.artist}`),
-        artist_images: newArtistImagesList,
-        song_images: newSongImagesList,
-        sprint_5_variant: 'variant_b',
-      });
-
-      // Store image URLs for artists and songs (local state for UI)
-      const newArtistImages: Record<string, string> = {};
-      artists.forEach(artist => {
-        if (artist.image_url) {
-          newArtistImages[artist.name] = artist.image_url;
-        }
-      });
-      setArtistImages(newArtistImages);
-
-      const newSongImages: Record<string, string> = {};
-      tracks.forEach(track => {
-        if (track.image_url) {
-          newSongImages[`${track.name} - ${track.artist}`] = track.image_url;
-        }
-      });
-      setSongImages(newSongImages);
+      _setSpotifyData(data); // Changed from setSpotifyData
+      await processSpotifyData(data);
 
     } catch (error) {
+      console.error("Error loading Spotify data:", error);
       setIsSpotifyConnected(false);
     } finally {
       setIsLoadingSpotify(false);
     }
   };
 
-  const handleSpotifySuccess = (data: SpotifyData) => {
-    setSpotifyData(data);
+  const handleSpotifySuccess = async (data: SpotifyData) => {
+    _setSpotifyData(data); // Changed from setSpotifyData
     setIsSpotifyConnected(true);
-    setInputMode('spotify');
+    setIsLoadingSpotify(true); // Show loading while processing/uploading
+    
+    try {
+        await processSpotifyData(data);
+    } catch (error) {
+        console.error("Error processing Spotify data:", error);
+    } finally {
+        setIsLoadingSpotify(false);
+    }
+  };
 
-    // Clear any existing manual data first to keep variants separate
-    // Then auto-populate form with Spotify data
+  const processSpotifyData = async (data: SpotifyData) => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    setIsUploadingImages(true);
+
+    // Auto-populate form with Spotify data
     const genresToSet = data.top_genres?.slice(0, MAX_GENRES) || [];
+    const artists = data.top_artists.slice(0, MAX_ARTISTS);
+    const tracks = data.top_tracks.slice(0, MAX_SONGS);
 
-    // Construct image arrays
-    const newArtistImagesList = data.top_artists
-      .slice(0, MAX_ARTISTS)
+    // Prepare items for batch upload
+    const artistItems = artists
       .filter(a => a.image_url)
       .map(a => ({ name: a.name, url: a.image_url! }));
 
-    const newSongImagesList = data.top_tracks
-      .slice(0, MAX_SONGS)
+    const songItems = tracks
       .filter(t => t.image_url)
       .map(t => ({ name: `${t.name} - ${t.artist}`, url: t.image_url! }));
 
+    // Upload images to Supabase Storage
+    const [uploadedArtists, uploadedSongs] = await Promise.all([
+      uploadSpotifyImageBatch(artistItems, userId, 'artists'),
+      uploadSpotifyImageBatch(songItems, userId, 'songs')
+    ]);
+
+    // Update Form Data with SECURE URLs
     updateFormData({
       top_genres: genresToSet,
-      top_artists: data.top_artists.slice(0, MAX_ARTISTS).map(a => a.name),
-      top_songs: data.top_tracks.slice(0, MAX_SONGS).map(t => `${t.name} - ${t.artist}`),
-      artist_images: newArtistImagesList,
-      song_images: newSongImagesList,
+      top_artists: artists.map(a => a.name),
+      top_songs: tracks.map(t => `${t.name} - ${t.artist}`),
+      artist_images: uploadedArtists,
+      song_images: uploadedSongs,
+      sprint_5_variant: 'variant_b',
     });
+
+    // Update local UI state
+    const newArtistImages: Record<string, string> = {};
+    uploadedArtists.forEach(item => {
+        newArtistImages[item.name] = item.url;
+    });
+    setArtistImages(newArtistImages);
+
+    const newSongImages: Record<string, string> = {};
+    uploadedSongs.forEach(item => {
+        newSongImages[item.name] = item.url;
+    });
+    setSongImages(newSongImages);
+
+    setIsUploadingImages(false);
   };
 
-  const handleSpotifyError = (error: Error) => {
-    // Handle error silently
-  };
-
-  const handleModeSwitch = (mode: InputMode) => {
-    // Clear form data when switching modes to keep variants separate
+  const handleDisconnect = async () => {
+    await logoutFromSpotify();
+    setIsSpotifyConnected(false);
+    _setSpotifyData(null);
     updateFormData({
       top_genres: [],
       top_artists: [],
       top_songs: [],
-      sprint_5_variant: mode === 'manual' ? 'variant_a' : 'variant_b',
+      artist_images: [],
+      song_images: [],
+      sprint_5_variant: 'variant_a',
     });
-
-    // Clear image mappings
-    setArtistImages({});
-    setSongImages({});
-
-    setInputMode(mode);
-
-    // If switching to Spotify mode and already connected, load data
-    if (mode === 'spotify' && isSpotifyConnected) {
-      loadSpotifyData();
-    } else if (mode === 'manual') {
-      // Clear search results when switching to manual
-      setSearchResults({ artists: [], tracks: [] });
-      setArtistSearchQuery('');
-      setTrackSearchQuery('');
-    }
   };
 
+
+
   // Search for artists using Spotify API
-  const searchForArtists = async (query: string) => {
+  const searchForArtists = useCallback(async (query: string) => {
     if (!query.trim() || query.length < 2) {
       setSearchResults({ ...searchResults, artists: [] });
       return;
@@ -215,14 +205,15 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       }));
       setSearchResults({ ...searchResults, artists: formattedArtists });
     } catch (error) {
+      console.error("Error searching artists:", error);
       setSearchResults({ ...searchResults, artists: [] });
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [searchResults, setSearchResults, setIsSearching]);
 
   // Search for tracks using Spotify API
-  const searchForTracks = async (query: string) => {
+  const searchForTracks = useCallback(async (query: string) => {
     if (!query.trim() || query.length < 2) {
       setSearchResults({ ...searchResults, tracks: [] });
       return;
@@ -239,11 +230,12 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       }));
       setSearchResults({ ...searchResults, tracks: formattedTracks });
     } catch (error) {
+      console.error("Error searching tracks:", error);
       setSearchResults({ ...searchResults, tracks: [] });
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [searchResults, setSearchResults, setIsSearching]);
 
   const toggleGenre = (genre: string) => {
     const current = formData.top_genres || [];
@@ -256,7 +248,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       // Add genre (use the exact case from the parameter)
       updateFormData({
         top_genres: [...current, genre],
-        sprint_5_variant: inputMode === 'manual' ? 'variant_a' : 'variant_b',
+        sprint_5_variant: 'variant_a',
       });
     }
   };
@@ -266,7 +258,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     if (!current.includes(artistName) && current.length < MAX_ARTISTS) {
       updateFormData({
         top_artists: [...current, artistName],
-        sprint_5_variant: inputMode === 'manual' ? 'variant_a' : 'variant_b',
+        sprint_5_variant: 'variant_a',
       });
       // Store image URL if provided
       if (imageUrl) {
@@ -294,7 +286,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     if (!current.includes(songString) && current.length < MAX_SONGS) {
       updateFormData({
         top_songs: [...current, songString],
-        sprint_5_variant: inputMode === 'manual' ? 'variant_a' : 'variant_b',
+        sprint_5_variant: 'variant_a',
       });
       // Store image URL if provided
       if (imageUrl) {
@@ -331,7 +323,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       // Clear search results if query is empty or not authenticated
       setSearchResults(prev => ({ ...prev, artists: [] }));
     }
-  }, [artistSearchQuery, inputMode, isSpotifyConnected, formData.top_artists]);
+  }, [artistSearchQuery, isSpotifyConnected, formData.top_artists, searchForArtists]);
 
   useEffect(() => {
     if (trackSearchQuery && isSpotifyConnected && (formData.top_songs?.length || 0) < MAX_SONGS) {
@@ -347,7 +339,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       // Clear search results if query is empty or not authenticated
       setSearchResults(prev => ({ ...prev, tracks: [] }));
     }
-  }, [trackSearchQuery, inputMode, isSpotifyConnected, formData.top_songs]);
+  }, [trackSearchQuery, isSpotifyConnected, formData.top_songs, searchForTracks]);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -355,93 +347,49 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
         Share your music taste to help us match you with people who love the same music!
       </Text>
 
-      {/* Mode Selection */}
-      <View style={styles.modeSelector}>
-        <TouchableOpacity
-          style={[styles.modeButton, inputMode === 'manual' && styles.modeButtonActive]}
-          onPress={() => handleModeSwitch('manual')}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons
-            name="edit"
-            size={20}
-            color={inputMode === 'manual' ? COLORS.text.inverse : COLORS.text.secondary}
-          />
-          <Text style={[styles.modeButtonText, inputMode === 'manual' && styles.modeButtonTextActive]}>
-            Variant A
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.modeButton, inputMode === 'spotify' && styles.modeButtonActive]}
-          onPress={() => handleModeSwitch('spotify')}
-          activeOpacity={0.7}
-        >
-          <MaterialIcons
-            name="music-note"
-            size={20}
-            color={inputMode === 'spotify' ? COLORS.text.inverse : COLORS.text.secondary}
-          />
-          <Text style={[styles.modeButtonText, inputMode === 'spotify' && styles.modeButtonTextActive]}>
-            Variant B
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Spotify Mode Content */}
-      {inputMode === 'spotify' && (
-        <View style={styles.spotifySection}>
-          {!isSpotifyConnected ? (
-            <>
-              <Text style={styles.spotifyDescription}>
-                Connect your Spotify account to automatically import your top genres, artists, and songs.
-              </Text>
-              <SpotifyButton
-                onSuccess={handleSpotifySuccess}
-                onError={handleSpotifyError}
-              />
-            </>
-          ) : (
-            <>
-              <View style={styles.connectedHeader}>
-                <MaterialIcons name="check-circle" size={20} color={COLORS.success} />
-                <Text style={styles.connectedText}>Spotify Connected</Text>
-                <TouchableOpacity
-                  style={styles.disconnectButton}
-                  onPress={() => {
-                    setIsSpotifyConnected(false);
-                    setSpotifyData(null);
-                    updateFormData({
-                      top_genres: [],
-                      top_artists: [],
-                      top_songs: [],
-                    });
-                    setInputMode('manual');
-                  }}
-                >
-                  <Text style={styles.disconnectText}>Disconnect</Text>
-                </TouchableOpacity>
-              </View>
-              {isLoadingSpotify && (
+      {/* Spotify Button as an optional action */}
+      {!isSpotifyConnected ? (
+         <View style={styles.spotifySection}>
+            <Text style={styles.spotifyDescription}>
+              Optional: Connect your Spotify account to auto-fill this section.
+            </Text>
+            {isLoadingSpotify ? (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={COLORS.primary} />
-                  <Text style={styles.loadingText}>Loading your music data...</Text>
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <Text style={styles.loadingText}>
+                        {isUploadingImages ? 'Securely saving images...' : 'Connecting to Spotify...'}
+                    </Text>
                 </View>
-              )}
-              {spotifyData && !isLoadingSpotify && (
-                <View style={styles.spotifyDataInfo}>
-                  <Text style={styles.spotifyDataText}>
-                    ✓ {spotifyData.top_genres.length} genres, {spotifyData.top_artists.length} artists, and {spotifyData.top_tracks.length} songs imported
-                  </Text>
-                  <Text style={styles.spotifyNote}>
-                    You can still edit your selections below or switch to manual input.
-                  </Text>
-                </View>
-              )}
-            </>
+            ) : (
+                <SpotifyButton
+                  onSuccess={handleSpotifySuccess}
+                  onError={handleSpotifyError}
+                />
+            )}
+        </View>
+      ) : (
+        <View style={styles.spotifySection}>
+          <View style={styles.connectedHeader}>
+            <MaterialIcons name="check-circle" size={20} color={COLORS.success} />
+            <Text style={styles.connectedText}>Spotify Connected</Text>
+            <TouchableOpacity
+              style={styles.disconnectButton}
+              onPress={handleDisconnect}
+            >
+              <Text style={styles.disconnectText}>Disconnect</Text>
+            </TouchableOpacity>
+          </View>
+          {isUploadingImages && (
+             <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.loadingText}>Securely saving images...</Text>
+             </View>
           )}
         </View>
       )}
+
+
+
 
       {/* Top Genres */}
       <View style={styles.section}>
@@ -449,67 +397,32 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
           Top Genres ({formData.top_genres?.length || 0}/{MAX_GENRES})
         </Text>
         <Text style={styles.subLabel}>
-          {inputMode === 'spotify' && spotifyData
-            ? 'Genres imported from Spotify (read-only)'
-            : 'Select up to ' + MAX_GENRES + ' genres'}
+          Select up to {MAX_GENRES} genres that best fit your taste.
         </Text>
 
-        {/* Selected Genres from Spotify */}
-        {inputMode === 'spotify' && spotifyData && formData.top_genres && formData.top_genres.length > 0 && (
-          <View style={styles.importedGenres}>
-            <Text style={styles.importedLabel}>Imported from Spotify:</Text>
-            <View style={styles.genresGrid}>
-              {formData.top_genres.map((genre, index) => {
-                const isInPredefinedList = MUSIC_GENRES.some(
-                  predefined => predefined.toLowerCase() === genre.toLowerCase()
-                );
-                return (
-                  <View
-                    key={`imported-${genre}-${index}`}
-                    style={[
-                      styles.genreChip,
-                      styles.genreChipSelected,
-                      !isInPredefinedList && styles.importedGenreChip,
-                      styles.genreChipReadOnly
-                    ]}
-                  >
-                    <Text style={[styles.genreChipText, styles.genreChipTextSelected]}>
-                      {genre}
-                    </Text>
-                    <MaterialIcons name="check" size={16} color={COLORS.text.inverse} />
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* Predefined Genre Chips - Only show in manual mode */}
-        {inputMode === 'manual' || !spotifyData ? (
-          <View style={styles.genresGrid}>
-            {MUSIC_GENRES.map((genre) => {
-              // Case-insensitive check for selected
-              const selected = formData.top_genres?.some(
-                g => g.toLowerCase() === genre.toLowerCase()
-              ) || false;
-              return (
-                <TouchableOpacity
-                  key={genre}
-                  style={[styles.genreChip, selected && styles.genreChipSelected]}
-                  onPress={() => toggleGenre(genre)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.genreChipText, selected && styles.genreChipTextSelected]}>
-                    {genre}
-                  </Text>
-                  {selected && (
-                    <MaterialIcons name="check" size={16} color={COLORS.text.inverse} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ) : null}
+        <View style={styles.genresGrid}>
+          {MUSIC_GENRES.map((genre) => {
+            // Case-insensitive check for selected
+            const selected = formData.top_genres?.some(
+              (g) => g.toLowerCase() === genre.toLowerCase()
+            ) || false;
+            return (
+              <TouchableOpacity
+                key={genre}
+                style={[styles.genreChip, selected && styles.genreChipSelected]}
+                onPress={() => toggleGenre(genre)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.genreChipText, selected && styles.genreChipTextSelected]}>
+                  {genre}
+                </Text>
+                {selected && (
+                  <MaterialIcons name="check" size={16} color={COLORS.text.inverse} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {/* Top Artists */}
@@ -518,19 +431,15 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
           Top Artists ({formData.top_artists?.length || 0}/{MAX_ARTISTS})
         </Text>
         <Text style={styles.subLabel}>
-          {inputMode === 'spotify' && spotifyData
-            ? 'Artists imported from Spotify (read-only)'
-            : 'Add up to ' + MAX_ARTISTS + ' artists'}
+          Add up to {MAX_ARTISTS} artists.
         </Text>
 
         {/* Selected Artists */}
         {formData.top_artists && formData.top_artists.length > 0 && (
           <View style={styles.selectedItems}>
             {formData.top_artists.map((artist, index) => {
-              // Look up image from stored images, spotifyData, or searchResults
-              const artistImage = artistImages[artist] ||
-                spotifyData?.top_artists?.find(a => a.name === artist)?.image_url ||
-                searchResults.artists.find(a => a.name === artist)?.image_url;
+              // Look up image from stored images
+              const artistImage = artistImages[artist];
 
               return (
                 <View key={index} style={styles.selectedItem}>
@@ -543,65 +452,61 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
                     <MaterialIcons name="person" size={18} color={COLORS.primary} />
                   )}
                   <Text style={styles.selectedItemText}>{artist}</Text>
-                  {inputMode === 'manual' || !spotifyData ? (
-                    <TouchableOpacity
-                      onPress={() => removeArtist(artist)}
-                      style={styles.removeButton}
-                    >
-                      <MaterialIcons name="close" size={18} color={COLORS.text.secondary} />
-                    </TouchableOpacity>
-                  ) : null}
+                  <TouchableOpacity
+                    onPress={() => removeArtist(artist)}
+                    style={styles.removeButton}
+                  >
+                    <MaterialIcons name="close" size={18} color={COLORS.text.secondary} />
+                  </TouchableOpacity>
                 </View>
               );
             })}
           </View>
         )}
 
-        {/* Artist Search - Only show in manual mode */}
-        {inputMode === 'manual' || !spotifyData ? (
-          (formData.top_artists?.length || 0) < MAX_ARTISTS ? (
-            <View>
-              <Input
-                placeholder={isSpotifyConnected ? "Search for artists..." : "Enter artist name (press Enter to add)"}
-                value={artistSearchQuery}
-                onChangeText={setArtistSearchQuery}
-                leftIcon={isSpotifyConnected ? <MaterialIcons name="search" size={20} color={COLORS.text.secondary} /> : undefined}
-                onSubmitEditing={() => {
-                  if (artistSearchQuery.trim() && !isSpotifyConnected) {
-                    // Only allow direct add if not authenticated (fallback to manual entry)
-                    addArtist(artistSearchQuery.trim());
-                  }
-                }}
-                returnKeyType="done"
-              />
-              {isSpotifyConnected && isSearching && (
-                <ActivityIndicator size="small" color={COLORS.primary} style={styles.searchLoader} />
-              )}
-              {isSpotifyConnected && searchResults.artists.length > 0 && (
-                <View style={styles.searchResults}>
-                  {searchResults.artists.slice(0, 5).map((artist) => (
-                    <TouchableOpacity
-                      key={artist.id}
-                      style={styles.searchResultItem}
-                      onPress={() => addArtist(artist.name, artist.image_url)}
-                    >
-                      {artist.image_url && (
-                        <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
-                      )}
-                      <Text style={styles.searchResultText}>{artist.name}</Text>
-                      <MaterialIcons name="add-circle" size={20} color={COLORS.primary} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          ) : (
-            <View style={styles.maxReachedContainer}>
-              <MaterialIcons name="check-circle" size={20} color={COLORS.success} />
-              <Text style={styles.maxReachedText}>Maximum artists reached</Text>
-            </View>
-          )
-        ) : null}
+        {/* Artist Search */}
+        {(formData.top_artists?.length || 0) < MAX_ARTISTS ? (
+          <View>
+            <Input
+              placeholder={isSpotifyConnected ? "Search for artists..." : "Enter artist name (press Enter to add)"}
+              value={artistSearchQuery}
+              onChangeText={setArtistSearchQuery}
+              leftIcon={isSpotifyConnected ? <MaterialIcons name="search" size={20} color={COLORS.text.secondary} /> : undefined}
+              onSubmitEditing={() => {
+                if (artistSearchQuery.trim() && !isSpotifyConnected) {
+                  // Only allow direct add if not authenticated (fallback to manual entry)
+                  addArtist(artistSearchQuery.trim());
+                }
+              }}
+              returnKeyType="done"
+            />
+            {isSpotifyConnected && isSearching && (
+              <ActivityIndicator size="small" color={COLORS.primary} style={styles.searchLoader} />
+            )}
+            {isSpotifyConnected && searchResults.artists.length > 0 && (
+              <View style={styles.searchResults}>
+                {searchResults.artists.slice(0, 5).map((artist) => (
+                  <TouchableOpacity
+                    key={artist.id}
+                    style={styles.searchResultItem}
+                    onPress={() => addArtist(artist.name, artist.image_url)}
+                  >
+                    {artist.image_url && (
+                      <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
+                    )}
+                    <Text style={styles.searchResultText}>{artist.name}</Text>
+                    <MaterialIcons name="add-circle" size={20} color={COLORS.primary} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        ) : (
+          <View style={styles.maxReachedContainer}>
+            <MaterialIcons name="check-circle" size={20} color={COLORS.success} />
+            <Text style={styles.maxReachedText}>Maximum artists reached</Text>
+          </View>
+        )}
       </View>
 
       {/* Top Songs */}
@@ -610,26 +515,15 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
           Top Songs ({formData.top_songs?.length || 0}/{MAX_SONGS})
         </Text>
         <Text style={styles.subLabel}>
-          {inputMode === 'spotify' && spotifyData
-            ? 'Songs imported from Spotify (read-only)'
-            : 'Add up to ' + MAX_SONGS + ' songs'}
+          Add up to {MAX_SONGS} songs.
         </Text>
 
         {/* Selected Songs */}
         {formData.top_songs && formData.top_songs.length > 0 && (
           <View style={styles.selectedItems}>
             {formData.top_songs.map((song, index) => {
-              // Parse song string "Song Name - Artist Name"
-              const [songName, artistName] = song.split(' - ');
-
-              // Look up image from stored images, spotifyData, or searchResults
-              const trackImage = songImages[song] ||
-                spotifyData?.top_tracks?.find(t =>
-                  t.name === songName && t.artist === artistName
-                )?.image_url ||
-                searchResults.tracks.find(t =>
-                  t.name === songName && t.artist === artistName
-                )?.image_url;
+              // Look up image from stored images
+              const trackImage = songImages[song];
 
               return (
                 <View key={index} style={styles.selectedItem}>
@@ -642,72 +536,68 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
                     <MaterialIcons name="music-note" size={18} color={COLORS.primary} />
                   )}
                   <Text style={styles.selectedItemText}>{song}</Text>
-                  {inputMode === 'manual' || !spotifyData ? (
-                    <TouchableOpacity
-                      onPress={() => removeSong(song)}
-                      style={styles.removeButton}
-                    >
-                      <MaterialIcons name="close" size={18} color={COLORS.text.secondary} />
-                    </TouchableOpacity>
-                  ) : null}
+                  <TouchableOpacity
+                    onPress={() => removeSong(song)}
+                    style={styles.removeButton}
+                  >
+                    <MaterialIcons name="close" size={18} color={COLORS.text.secondary} />
+                  </TouchableOpacity>
                 </View>
               );
             })}
           </View>
         )}
 
-        {/* Track Search - Only show in manual mode */}
-        {inputMode === 'manual' || !spotifyData ? (
-          (formData.top_songs?.length || 0) < MAX_SONGS ? (
-            <View>
-              <Input
-                placeholder={isSpotifyConnected ? "Search for songs..." : "Enter song name - artist (press Enter to add)"}
-                value={trackSearchQuery}
-                onChangeText={setTrackSearchQuery}
-                leftIcon={isSpotifyConnected ? <MaterialIcons name="search" size={20} color={COLORS.text.secondary} /> : undefined}
-                onSubmitEditing={() => {
-                  if (trackSearchQuery.trim() && !isSpotifyConnected) {
-                    // Only allow direct add if not authenticated (fallback to manual entry)
-                    addSong(trackSearchQuery.trim(), '');
-                  }
-                }}
-                returnKeyType="done"
-              />
-              {isSpotifyConnected && isSearching && (
-                <ActivityIndicator size="small" color={COLORS.primary} style={styles.searchLoader} />
-              )}
-              {isSpotifyConnected && searchResults.tracks.length > 0 && (
-                <View style={styles.searchResults}>
-                  {searchResults.tracks.slice(0, 5).map((track) => (
-                    <TouchableOpacity
-                      key={track.id}
-                      style={styles.searchResultItem}
-                      onPress={() => addSong(track.name, track.artist, track.image_url)}
-                    >
-                      {track.image_url && (
-                        <Image source={{ uri: track.image_url }} style={styles.trackImage} />
-                      )}
-                      <View style={styles.trackInfo}>
-                        <Text style={styles.searchResultText} numberOfLines={1}>
-                          {track.name}
-                        </Text>
-                        <Text style={styles.trackArtist} numberOfLines={1}>
-                          {track.artist}
-                        </Text>
-                      </View>
-                      <MaterialIcons name="add-circle" size={20} color={COLORS.primary} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          ) : (
-            <View style={styles.maxReachedContainer}>
-              <MaterialIcons name="check-circle" size={20} color={COLORS.success} />
-              <Text style={styles.maxReachedText}>Maximum songs reached</Text>
-            </View>
-          )
-        ) : null}
+        {/* Track Search */}
+        {(formData.top_songs?.length || 0) < MAX_SONGS ? (
+          <View>
+            <Input
+              placeholder={isSpotifyConnected ? "Search for songs..." : "Enter song name - artist (press Enter to add)"}
+              value={trackSearchQuery}
+              onChangeText={setTrackSearchQuery}
+              leftIcon={isSpotifyConnected ? <MaterialIcons name="search" size={20} color={COLORS.text.secondary} /> : undefined}
+              onSubmitEditing={() => {
+                if (trackSearchQuery.trim() && !isSpotifyConnected) {
+                  // Only allow direct add if not authenticated (fallback to manual entry)
+                  addSong(trackSearchQuery.trim(), '');
+                }
+              }}
+              returnKeyType="done"
+            />
+            {isSpotifyConnected && isSearching && (
+              <ActivityIndicator size="small" color={COLORS.primary} style={styles.searchLoader} />
+            )}
+            {isSpotifyConnected && searchResults.tracks.length > 0 && (
+              <View style={styles.searchResults}>
+                {searchResults.tracks.slice(0, 5).map((track) => (
+                  <TouchableOpacity
+                    key={track.id}
+                    style={styles.searchResultItem}
+                    onPress={() => addSong(track.name, track.artist, track.image_url)}
+                  >
+                    {track.image_url && (
+                      <Image source={{ uri: track.image_url }} style={styles.trackImage} />
+                    )}
+                    <View style={styles.trackInfo}>
+                      <Text style={styles.searchResultText} numberOfLines={1}>
+                        {track.name}
+                      </Text>
+                      <Text style={styles.trackArtist} numberOfLines={1}>
+                        {track.artist}
+                      </Text>
+                    </View>
+                    <MaterialIcons name="add-circle" size={20} color={COLORS.primary} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        ) : (
+          <View style={styles.maxReachedContainer}>
+            <MaterialIcons name="check-circle" size={20} color={COLORS.success} />
+            <Text style={styles.maxReachedText}>Maximum songs reached</Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );

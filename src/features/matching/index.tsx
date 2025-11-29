@@ -1,14 +1,14 @@
 // src/features/matching/index.tsx
 import { COLORS } from "@constants";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SecureStoreAdapter } from "../../lib/secureStore";
 import { deleteAllMatchesForUser, upsertMatchForTestProfile } from '@services/supabase/matches';
 import { useABTestStore, useUserStore } from "@store";
 import type { TestProfile } from "@types";
 import { responsiveSizes } from "@utils/responsive";
 import { TEST_PROFILES } from "@utils/testProfiles";
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -21,11 +21,11 @@ import {
   View
 } from "react-native";
 import { ABTestProfileCard } from "../testing/ABTestProfileCard";
-import { calculateMatchScore } from "./MatchingService";
 import styles from "./styles";
 
 const MAX_LIKES_PER_DAY = 5;
-const STORAGE_KEY = "@harmonize_daily_likes";
+// Key must be alphanumeric, ".", "-", or "_"
+const STORAGE_KEY = "harmonize_daily_likes";
 
 export default function MatchScreen() {
 
@@ -33,7 +33,7 @@ export default function MatchScreen() {
   // HOOKS (Fixed order, never conditional)
   // ------------------------------------------------------------
   const router = useRouter();
-  const { variant, initialize, trackDecision, isLoading } = useABTestStore();
+  const { initialize, trackDecision, isLoading } = useABTestStore();
   const { currentUser, session } = useUserStore();
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -42,6 +42,7 @@ export default function MatchScreen() {
 
   const screenWidth = Dimensions.get("window").width;
   const slideAnim = useMemo(() => new Animated.Value(0), []);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // ------------------------------------------------------------
   // EFFECT: Initialization (one time per login session)
@@ -60,13 +61,19 @@ export default function MatchScreen() {
         return;
       }
 
-      const testerMode = await AsyncStorage.getItem("@harmonize_is_tester_mode");
+      const testerMode = await SecureStoreAdapter.getItem("harmonize_is_tester_mode");
       if (!cancelled) setIsTesterMode(testerMode === "true");
 
       // Fetch real profiles
       try {
         const { getPotentialMatches } = await import('@services/supabase/user');
         const realUsers = await getPotentialMatches(currentUser.id);
+        
+        console.log('[MatchScreen] Real users found:', realUsers.length);
+        if (realUsers.length > 0) {
+          console.log('[MatchScreen] First real user top_artists:', JSON.stringify(realUsers[0].top_artists));
+          console.log('[MatchScreen] First real user artist_images:', JSON.stringify(realUsers[0].artist_images));
+        }
 
         if (realUsers.length > 0) {
           // Map real users to TestProfile format
@@ -80,6 +87,8 @@ export default function MatchScreen() {
             top_artists: user.top_artists || [],
             top_genres: user.top_genres || [],
             top_songs: user.top_songs || [],
+            artist_images: user.artist_images || [],
+            song_images: user.song_images || [],
             // Default values for required TestProfile fields
             pronouns: user.pronouns || 'they/them',
             university: user.university || 'Unknown University',
@@ -123,6 +132,7 @@ export default function MatchScreen() {
   // ------------------------------------------------------------
   useEffect(() => {
     setProfileLoadTime(Date.now());
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false }); // Reset scroll position
   }, [currentIndex]);
 
   // ------------------------------------------------------------
@@ -165,7 +175,7 @@ export default function MatchScreen() {
   // ------------------------------------------------------------
   const handleLike = useCallback(async () => {
     const today = new Date().toISOString().split("T")[0];
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    const stored = await SecureStoreAdapter.getItem(STORAGE_KEY);
     let data = stored ? JSON.parse(stored) : { date: today, count: 0 };
 
     if (data.date !== today) data = { date: today, count: 0 };
@@ -200,7 +210,7 @@ export default function MatchScreen() {
     }
 
     data.count += 1;
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    await SecureStoreAdapter.setItem(STORAGE_KEY, JSON.stringify(data));
 
     slideToNext("right", handleNext);
   }, [currentIndex, profileLoadTime, slideToNext, handleNext, currentUser, trackDecision, displayProfiles]);
@@ -245,7 +255,7 @@ export default function MatchScreen() {
       const today = new Date().toISOString().split("T")[0];
 
       // Reset daily likes
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ date: today, count: 0 }));
+      await SecureStoreAdapter.setItem(STORAGE_KEY, JSON.stringify({ date: today, count: 0 }));
 
       // Delete matches in Supabase
       if (currentUser?.id) {
@@ -279,9 +289,6 @@ export default function MatchScreen() {
 
   const currentProfile = displayProfiles[currentIndex];
 
-  // Calculate match score
-  const matchScore = currentUser ? calculateMatchScore(currentUser, currentProfile) : 0;
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -294,7 +301,7 @@ export default function MatchScreen() {
 
       <View style={styles.cardContainer}>
         <Animated.View style={{ flex: 1, transform: [{ translateX: slideAnim }] }}>
-          <ScrollView style={styles.cardScrollView} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.cardScrollView} showsVerticalScrollIndicator={false} ref={scrollViewRef}>
             <ABTestProfileCard profile={currentProfile} />
           </ScrollView>
         </Animated.View>

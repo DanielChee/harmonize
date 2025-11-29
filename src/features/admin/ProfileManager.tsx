@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Modal, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getAllProfiles, deleteProfile, updateUserProfile } from '@services/supabase/user';
+import { syncUserImagesFromSpotify } from '@services/spotify/admin';
+import { isAuthenticated, searchArtists, searchTracks } from '@services/spotify';
 import { TEST_PROFILES } from '@utils/testProfiles';
 import type { User } from '@types';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,16 +13,143 @@ export function ProfileManager() {
     const [profiles, setProfiles] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isActionLoading, setIsActionLoading] = useState(false);
+    
+    // Editing State
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    
+    // Spotify Search State
+    const [isAdminSpotifyConnected, setIsAdminSpotifyConnected] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchType, setSearchType] = useState<'artist' | 'track'>('artist');
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+
+    // Form State
+    const [editForm, setEditForm] = useState({
+        display_name: '',
+        bio: '',
+        university: '',
+        profile_picture_url: '',
+        top_artists: '', // Comma separated
+        top_songs: '',   // Comma separated
+        artist_images: '', // Comma separated
+        song_images: '',   // Comma separated
+    });
 
     useEffect(() => {
         loadProfiles();
+        checkSpotifyConnection();
     }, []);
+
+    const checkSpotifyConnection = async () => {
+        const connected = await isAuthenticated();
+        setIsAdminSpotifyConnected(connected);
+    };
+
+    const handleSearch = async (text: string) => {
+        setSearchQuery(text);
+        if (text.length < 3) {
+            setSearchResults([]);
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            if (searchType === 'artist') {
+                const results = await searchArtists(text, 5);
+                setSearchResults(results.items);
+            } else {
+                const results = await searchTracks(text, undefined, 5);
+                setSearchResults(results.items);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const addSearchResult = (item: any) => {
+        if (searchType === 'artist') {
+            const name = item.name;
+            const image = item.images[0]?.url || '';
+            
+            const currentArtists = editForm.top_artists ? editForm.top_artists.split(',').map(s => s.trim()).filter(Boolean) : [];
+            const currentImages = editForm.artist_images ? editForm.artist_images.split(',').map(s => s.trim()).filter(Boolean) : [];
+            
+            setEditForm(prev => ({
+                ...prev,
+                top_artists: [...currentArtists, name].join(', '),
+                artist_images: [...currentImages, image].join(', '),
+            }));
+        } else {
+            const name = `${item.name} - ${item.artists[0].name}`;
+            const image = item.album.images[0]?.url || '';
+            
+            const currentSongs = editForm.top_songs ? editForm.top_songs.split(',').map(s => s.trim()).filter(Boolean) : [];
+            const currentImages = editForm.song_images ? editForm.song_images.split(',').map(s => s.trim()).filter(Boolean) : [];
+            
+            setEditForm(prev => ({
+                ...prev,
+                top_songs: [...currentSongs, name].join(', '),
+                song_images: [...currentImages, image].join(', '),
+            }));
+        }
+        setSearchQuery('');
+        setSearchResults([]);
+    };
 
     const loadProfiles = async () => {
         setIsLoading(true);
         const data = await getAllProfiles();
         setProfiles(data);
         setIsLoading(false);
+    };
+
+    const handleEdit = (user: User) => {
+        setEditingUser(user);
+        setEditForm({
+            display_name: user.display_name || '',
+            bio: user.bio || '',
+            university: user.university || '',
+            profile_picture_url: user.profile_picture_url || '',
+            top_artists: (user.top_artists || []).join(', '),
+            top_songs: (user.top_songs || []).join(', '),
+            artist_images: (user.artist_images || []).join(', '),
+            song_images: (user.song_images || []).join(', '),
+        });
+        setIsModalVisible(true);
+    };
+
+    const saveProfile = async () => {
+        if (!editingUser) return;
+
+        setIsActionLoading(true);
+        try {
+            const updates: Partial<User> = {
+                display_name: editForm.display_name,
+                bio: editForm.bio,
+                university: editForm.university,
+                profile_picture_url: editForm.profile_picture_url,
+                top_artists: editForm.top_artists.split(',').map(s => s.trim()).filter(Boolean),
+                top_songs: editForm.top_songs.split(',').map(s => s.trim()).filter(Boolean),
+                artist_images: editForm.artist_images.split(',').map(s => s.trim()).filter(Boolean),
+                song_images: editForm.song_images.split(',').map(s => s.trim()).filter(Boolean),
+            };
+
+            const updatedUser = await updateUserProfile(editingUser.id, updates);
+            if (updatedUser) {
+                setProfiles(prev => prev.map(p => p.id === editingUser.id ? updatedUser : p));
+                Alert.alert('Success', 'Profile updated');
+                setIsModalVisible(false);
+                setEditingUser(null);
+            }
+        } catch (error: any) {
+            Alert.alert('Error', 'Failed to update profile: ' + error.message);
+        } finally {
+            setIsActionLoading(false);
+        }
     };
 
     const handleDelete = (id: string, name: string) => {
@@ -42,6 +171,43 @@ export function ProfileManager() {
                             Alert.alert('Error', 'Failed to delete profile');
                         }
                         setIsActionLoading(false);
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleSyncImages = async (user: User) => {
+        Alert.alert(
+            'Sync Images from Spotify',
+            `This will fetch images for ${user.display_name}'s top artists and songs using your admin Spotify token. Proceed?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Sync',
+                    onPress: async () => {
+                        setIsActionLoading(true);
+                        try {
+                            // 1. Fetch and upload images
+                            const { artist_images, song_images } = await syncUserImagesFromSpotify(user);
+                            
+                            // 2. Update user profile with new URLs
+                            const updatedUser = await updateUserProfile(user.id, {
+                                artist_images,
+                                song_images,
+                                sprint_5_variant: 'variant_b' // Mark as having Spotify data structure
+                            });
+
+                            if (updatedUser) {
+                                setProfiles(prev => prev.map(p => p.id === user.id ? updatedUser : p));
+                                Alert.alert('Success', 'Images synced and profile updated.');
+                            }
+                        } catch (error: any) {
+                            console.error('Sync failed:', error);
+                            Alert.alert('Error', 'Failed to sync images: ' + error.message);
+                        } finally {
+                            setIsActionLoading(false);
+                        }
                     }
                 }
             ]
@@ -148,6 +314,20 @@ export function ProfileManager() {
                 </View>
                 <View style={styles.actions}>
                     <TouchableOpacity
+                        onPress={() => handleSyncImages(item)}
+                        disabled={isActionLoading}
+                        style={styles.iconButton}
+                    >
+                        <MaterialIcons name="sync" size={24} color={COLORS.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => handleEdit(item)}
+                        disabled={isActionLoading}
+                        style={styles.iconButton}
+                    >
+                        <MaterialIcons name="edit" size={24} color={COLORS.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
                         onPress={() => handleToggleAdmin(item)}
                         disabled={isActionLoading}
                         style={styles.iconButton}
@@ -207,6 +387,175 @@ export function ProfileManager() {
                     }
                 />
             )}
+
+            {/* Edit Modal */}
+            <Modal
+                visible={isModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setIsModalVisible(false)}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
+                >
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Edit Profile</Text>
+                            <TouchableOpacity onPress={() => setIsModalVisible(false)}>
+                                <MaterialIcons name="close" size={24} color={COLORS.text.secondary} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={styles.modalForm}>
+                            {isAdminSpotifyConnected && (
+                                <View style={styles.searchSection}>
+                                    <Text style={styles.sectionTitle}>Add Music from Spotify</Text>
+                                    <View style={styles.searchTypeRow}>
+                                        <TouchableOpacity
+                                            style={[styles.typeButton, searchType === 'artist' && styles.typeButtonActive]}
+                                            onPress={() => setSearchType('artist')}
+                                        >
+                                            <Text style={[styles.typeButtonText, searchType === 'artist' && styles.typeButtonTextActive]}>Artists</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.typeButton, searchType === 'track' && styles.typeButtonActive]}
+                                            onPress={() => setSearchType('track')}
+                                        >
+                                            <Text style={[styles.typeButtonText, searchType === 'track' && styles.typeButtonTextActive]}>Songs</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                    
+                                    <TextInput
+                                        style={styles.searchInput}
+                                        placeholder={`Search ${searchType}s...`}
+                                        value={searchQuery}
+                                        onChangeText={handleSearch}
+                                    />
+                                    
+                                    {isSearching && <ActivityIndicator size="small" color={COLORS.primary} />}
+                                    
+                                    {searchResults.length > 0 && (
+                                        <View style={styles.resultsList}>
+                                            {searchResults.map((item) => (
+                                                <TouchableOpacity
+                                                    key={item.id}
+                                                    style={styles.resultItem}
+                                                    onPress={() => addSearchResult(item)}
+                                                >
+                                                    <Text style={styles.resultText}>{item.name}</Text>
+                                                    <MaterialIcons name="add-circle" size={20} color={COLORS.primary} />
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    )}
+                                </View>
+                            )}
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Display Name</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={editForm.display_name}
+                                    onChangeText={(t) => setEditForm(prev => ({ ...prev, display_name: t }))}
+                                />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Bio</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    value={editForm.bio}
+                                    onChangeText={(t) => setEditForm(prev => ({ ...prev, bio: t }))}
+                                    multiline
+                                />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>University</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={editForm.university}
+                                    onChangeText={(t) => setEditForm(prev => ({ ...prev, university: t }))}
+                                />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Profile Picture URL</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={editForm.profile_picture_url}
+                                    onChangeText={(t) => setEditForm(prev => ({ ...prev, profile_picture_url: t }))}
+                                />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Top Artists (comma separated)</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    value={editForm.top_artists}
+                                    onChangeText={(t) => setEditForm(prev => ({ ...prev, top_artists: t }))}
+                                    multiline
+                                    placeholder="Artist 1, Artist 2, Artist 3"
+                                />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Artist Images (comma separated URLs)</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    value={editForm.artist_images}
+                                    onChangeText={(t) => setEditForm(prev => ({ ...prev, artist_images: t }))}
+                                    multiline
+                                    placeholder="http://url1.jpg, http://url2.jpg"
+                                />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Top Songs (comma separated)</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    value={editForm.top_songs}
+                                    onChangeText={(t) => setEditForm(prev => ({ ...prev, top_songs: t }))}
+                                    multiline
+                                    placeholder="Song 1 - Artist, Song 2 - Artist"
+                                />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Song Images (comma separated URLs)</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea]}
+                                    value={editForm.song_images}
+                                    onChangeText={(t) => setEditForm(prev => ({ ...prev, song_images: t }))}
+                                    multiline
+                                    placeholder="http://url1.jpg, http://url2.jpg"
+                                />
+                            </View>
+                        </ScrollView>
+
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.cancelButton]}
+                                onPress={() => setIsModalVisible(false)}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalButton, styles.saveButton]}
+                                onPress={saveProfile}
+                                disabled={isActionLoading}
+                            >
+                                {isActionLoading ? (
+                                    <ActivityIndicator size="small" color="white" />
+                                ) : (
+                                    <Text style={styles.saveButtonText}>Save Changes</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
         </View>
     );
 }
@@ -316,5 +665,151 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         color: COLORS.text.secondary,
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: COLORS.background,
+        borderTopLeftRadius: BORDER_RADIUS.lg,
+        borderTopRightRadius: BORDER_RADIUS.lg,
+        height: '80%',
+        padding: SPACING.lg,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: SPACING.lg,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: COLORS.text.primary,
+    },
+    modalForm: {
+        flex: 1,
+    },
+    formGroup: {
+        marginBottom: SPACING.md,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: COLORS.text.secondary,
+        marginBottom: SPACING.xs,
+    },
+    input: {
+        backgroundColor: COLORS.surface,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: BORDER_RADIUS.sm,
+        padding: SPACING.md,
+        fontSize: 16,
+        color: COLORS.text.primary,
+    },
+    textArea: {
+        height: 80,
+        textAlignVertical: 'top',
+    },
+    modalFooter: {
+        flexDirection: 'row',
+        gap: SPACING.md,
+        paddingTop: SPACING.md,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.border,
+    },
+    modalButton: {
+        flex: 1,
+        padding: SPACING.md,
+        borderRadius: BORDER_RADIUS.md,
+        alignItems: 'center',
+    },
+    cancelButton: {
+        backgroundColor: COLORS.surface,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    saveButton: {
+        backgroundColor: COLORS.primary,
+    },
+    cancelButtonText: {
+        fontWeight: '600',
+        color: COLORS.text.primary,
+    },
+    saveButtonText: {
+        fontWeight: '600',
+        color: COLORS.text.inverse,
+    },
+    searchSection: {
+        marginBottom: SPACING.lg,
+        padding: SPACING.md,
+        backgroundColor: COLORS.surface,
+        borderRadius: BORDER_RADIUS.md,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: SPACING.md,
+        color: COLORS.text.primary,
+    },
+    searchTypeRow: {
+        flexDirection: 'row',
+        marginBottom: SPACING.md,
+        gap: SPACING.md,
+    },
+    typeButton: {
+        flex: 1,
+        padding: SPACING.sm,
+        alignItems: 'center',
+        borderRadius: BORDER_RADIUS.sm,
+        backgroundColor: COLORS.background,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    typeButtonActive: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    typeButtonText: {
+        color: COLORS.text.secondary,
+        fontWeight: '600',
+    },
+    typeButtonTextActive: {
+        color: COLORS.text.inverse,
+    },
+    searchInput: {
+        backgroundColor: COLORS.background,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: BORDER_RADIUS.sm,
+        padding: SPACING.md,
+        fontSize: 16,
+        color: COLORS.text.primary,
+        marginBottom: SPACING.sm,
+    },
+    resultsList: {
+        maxHeight: 150,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: BORDER_RADIUS.sm,
+        backgroundColor: COLORS.background,
+    },
+    resultItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: SPACING.md,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
+    },
+    resultText: {
+        color: COLORS.text.primary,
+        flex: 1,
     },
 });

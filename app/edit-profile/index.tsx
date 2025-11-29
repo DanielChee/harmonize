@@ -3,11 +3,9 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { Stack, useRouter } from 'expo-router';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EditProfileMenuScreen() {
     const router = useRouter();
-    const insets = useSafeAreaInsets();
 
     const menuItems = [
         {
@@ -59,7 +57,7 @@ export default function EditProfileMenuScreen() {
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.headerDescription}>
-                    Select a section to edit. Your changes will be saved immediately.
+                    Select a section to edit.
                 </Text>
 
                 <View style={styles.menuContainer}>
@@ -113,7 +111,7 @@ const styles = StyleSheet.create({
     iconContainer: {
         width: 40,
         height: 40,
-        borderRadius: BORDER_RADIUS.full,
+        borderRadius: BORDER_RADIUS.circle,
         backgroundColor: `${COLORS.primary}15`, // 15% opacity
         alignItems: 'center',
         justifyContent: 'center',

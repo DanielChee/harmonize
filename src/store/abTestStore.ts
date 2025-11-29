@@ -80,7 +80,7 @@ export const useABTestStore = create<ABTestStore>((set, get) => ({
       if (shouldForceVariant && assignment) {
         if (assignment.assignedVariant !== forceVariant) {
           console.log(`[A/B Test] Force variant mismatch. Reassigning from ${assignment.assignedVariant} to ${forceVariant}...`);
-          const newVariant = await assignVariant(userId);
+          await assignVariant(userId);
           assignment = await getUserAssignment();
         } else {
           console.log(`[A/B Test] Using existing assignment with forced variant ${forceVariant}`);
@@ -88,7 +88,7 @@ export const useABTestStore = create<ABTestStore>((set, get) => ({
       } else if (!assignment) {
         // No existing assignment, create new one
         console.log('[A/B Test] No assignment found, creating new one...');
-        const newVariant = await assignVariant(userId);
+        await assignVariant(userId);
         assignment = await getUserAssignment();
       }
 

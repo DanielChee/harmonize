@@ -7,6 +7,9 @@ export const APP_CONFIG = {
   tagline: 'Concert Buddy Finder',
 } as const;
 
+// Environment
+export const IS_DEV = __DEV__;
+
 // API Endpoints
 export const API_ENDPOINTS = {
   spotify: {

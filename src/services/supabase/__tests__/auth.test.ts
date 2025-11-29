@@ -1,122 +1,132 @@
-/**
- * Tests for Supabase Auth Service
- *
- * This is a sample test file demonstrating the testing setup.
- * TODO: Expand test coverage to reach 70% threshold.
- */
 
-import { signUp, signIn, signOut } from '../auth';
+import { supabase } from '../supabase';
+import {
+  signIn,
+  signUp,
+  isValidEmail,
+  isValidPassword,
+  isValidUsername,
+} from '../auth';
 
-// Mock Supabase client
-jest.mock('../supabase', () => ({
-  supabase: {
-    auth: {
-      signUp: jest.fn(),
-      signInWithPassword: jest.fn(),
-      signOut: jest.fn(),
-      getSession: jest.fn(),
-    },
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          single: jest.fn(),
-        })),
-      })),
-    })),
-  },
-}));
+// Use the manual mock from the __mocks__ directory
+jest.mock('../supabase');
+
+// Create a typed version of the mocked supabase client for autocompletion
+const mockedSupabase = supabase as jest.Mocked<typeof supabase>;
 
 describe('Auth Service', () => {
   beforeEach(() => {
+    // Clears the history of all mocks before each test
     jest.clearAllMocks();
   });
 
-  describe('signUp', () => {
-    it('should validate email format', async () => {
-      const result = await signUp({
-        email: 'invalid-email',
-        password: 'password123',
-        username: 'testuser',
-      });
-
-      expect(result.error).toBe('Please enter a valid email address');
+  // --- Validation Functions ---
+  describe('Validation Functions', () => {
+    it('isValidEmail should validate emails correctly', () => {
+      expect(isValidEmail('test@example.com')).toBe(true);
+      expect(isValidEmail('invalid-email')).toBe(false);
     });
 
-    it('should validate username length (min 3 chars)', async () => {
-      const result = await signUp({
-        email: 'test@example.com',
-        password: 'password123',
-        username: 'ab',
-      });
-
-      expect(result.error).toBe('Username must be 3-20 characters');
+    it('isValidPassword should validate passwords correctly', () => {
+      expect(isValidPassword('123456')).toBe(true);
+      expect(isValidPassword('short')).toBe(false);
     });
 
-    it('should validate username length (max 20 chars)', async () => {
-      const result = await signUp({
-        email: 'test@example.com',
-        password: 'password123',
-        username: 'a'.repeat(21),
-      });
-
-      expect(result.error).toBe('Username must be 3-20 characters');
+    it('isValidUsername should validate usernames correctly', () => {
+      expect(isValidUsername('testuser')).toBe(true);
+      expect(isValidUsername('sh')).toBe(false);
+      expect(isValidUsername('invalid user')).toBe(false);
     });
-
-    it('should validate password length (min 6 chars)', async () => {
-      const result = await signUp({
-        email: 'test@example.com',
-        password: '12345',
-        username: 'testuser',
-      });
-
-      expect(result.error).toBe('Password must be at least 6 characters');
-    });
-
-    it('should validate username format (alphanumeric only)', async () => {
-      const result = await signUp({
-        email: 'test@example.com',
-        password: 'password123',
-        username: 'test user',
-      });
-
-      expect(result.error).toBe('Username can only contain letters, numbers, and underscores');
-    });
-
-    // TODO: Add test for successful sign up
-    // TODO: Add test for username already taken
-    // TODO: Add test for email already registered
   });
 
+  // --- signIn ---
   describe('signIn', () => {
-    it('should validate email format', async () => {
-      const result = await signIn({
-        email: 'invalid-email',
-        password: 'password123',
-      });
+    const signInData = { email: 'test@example.com', password: 'password123' };
 
-      expect(result.error).toBe('Please enter a valid email address');
+    it('should return user and session on successful sign-in', async () => {
+      const mockUser = { id: '123', email: signInData.email };
+      const mockSession = { access_token: 'abc', refresh_token: 'xyz' };
+
+      (mockedSupabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({
+        data: { user: mockUser, session: mockSession },
+        error: null,
+      } as any);
+
+      const result = await signIn(signInData);
+
+      expect(result.user).toEqual(mockUser);
+      expect(result.error).toBeNull();
+      expect(mockedSupabase.auth.signInWithPassword).toHaveBeenCalledWith(signInData);
     });
 
-    it('should validate password is provided', async () => {
-      const result = await signIn({
-        email: 'test@example.com',
-        password: '',
-      });
+    it('should return an error on failed sign-in', async () => {
+      const mockError = { name: 'AuthApiError', message: 'Invalid login credentials' };
 
-      expect(result.error).toBe('Password is required');
+      (mockedSupabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({
+        data: { user: null, session: null },
+        error: mockError,
+      } as any);
+
+      const result = await signIn(signInData);
+
+      expect(result.user).toBeNull();
+      expect(result.error).toEqual(mockError);
+    });
+  });
+
+  // --- signUp ---
+  describe('signUp', () => {
+    const signUpData = { email: 'test@example.com', password: 'password123', username: 'testuser' };
+
+    it('should return an error if username is taken', async () => {
+      // Arrange: Mock the builder chain for a taken username
+      const singleMock = jest.fn().mockResolvedValueOnce({ data: { username: 'testuser' }, error: null });
+      const eqMock = jest.fn(() => ({ single: singleMock }));
+      const selectMock = jest.fn(() => ({ eq: eqMock }));
+      (mockedSupabase.from as jest.Mock).mockReturnValue({ select: selectMock });
+
+      // Act
+      const result = await signUp(signUpData);
+
+      // Assert
+      expect(result.error?.message).toBe('Username is already taken');
+      expect(result.user).toBeNull();
+      expect(mockedSupabase.from).toHaveBeenCalledWith('profiles');
+      expect(selectMock).toHaveBeenCalledWith('username');
+      expect(eqMock).toHaveBeenCalledWith('username', signUpData.username);
+      expect(mockedSupabase.auth.signUp).not.toHaveBeenCalled();
     });
 
-    // TODO: Add test for successful sign in
-    // TODO: Add test for invalid credentials
-  });
+    it('should sign up a user successfully if username is available', async () => {
+      const mockUser = { id: '123', email: signUpData.email };
+      const mockSession = { access_token: 'abc', refresh_token: 'xyz' };
 
-  describe('signOut', () => {
-    // TODO: Add test for successful sign out
-    // TODO: Add test for sign out error handling
-  });
+      // Arrange: Mock the builder chain for an available username
+      const singleMock = jest.fn().mockResolvedValueOnce({ data: null, error: { code: 'PGRST116' } });
+      const eqMock = jest.fn(() => ({ single: singleMock }));
+      const selectMock = jest.fn(() => ({ eq: eqMock }));
+      (mockedSupabase.from as jest.Mock).mockReturnValueOnce({ select: selectMock });
 
-  // TODO: Add tests for:
-  // - getSession()
-  // - checkUsernameAvailable()
-  // - checkEmailAvailable()
+      // Arrange: Mock the successful auth.signUp call
+      (mockedSupabase.auth.signUp as jest.Mock).mockResolvedValueOnce({
+        data: { user: mockUser, session: mockSession },
+        error: null,
+      } as any);
+
+      // Arrange: Mock the profile creation
+       (mockedSupabase.from as jest.Mock).mockReturnValueOnce({
+        upsert: jest.fn().mockResolvedValueOnce({ error: null })
+      });
+
+      // Act
+      const result = await signUp(signUpData);
+
+      // Assert
+      expect(result.user).toEqual(mockUser);
+      expect(result.session).toEqual(mockSession);
+      expect(result.error).toBeNull();
+      expect(mockedSupabase.auth.signUp).toHaveBeenCalledTimes(1);
+      expect(mockedSupabase.from).toHaveBeenCalledWith('profiles'); // Called for profile creation
+    });
+  });
 });

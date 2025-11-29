@@ -311,11 +311,13 @@ export const SPOTIFY_TAYLOR: SpotifyData = {
 };
 
 // Profile data array for easy cycling
-export const TEST_PROFILES = [
+export const DEPRECATED_TEST_PROFILES = [
   { user: PROFILE_ALEX, spotify: SPOTIFY_ALEX },
   { user: PROFILE_JORDAN, spotify: SPOTIFY_JORDAN },
   { user: PROFILE_TAYLOR, spotify: SPOTIFY_TAYLOR },
 ];
+
+export const TEST_PROFILES = DEPRECATED_TEST_PROFILES;
 
 // Export individual pieces for backward compatibility
 export {

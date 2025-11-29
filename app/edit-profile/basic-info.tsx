@@ -5,7 +5,7 @@ import { COLORS, SPACING } from '@constants';
 import { Button } from '@components';
 import { BasicInfoStep } from '@features/profile-setup/BasicInfoStep';
 import { useUserStore } from '@store';
-import { getUserProfile, updateUserProfile } from '@services/supabase/user';
+import { updateUserProfile } from '@services/supabase/user';
 
 export default function EditBasicInfoScreen() {
     const router = useRouter();
@@ -45,21 +45,19 @@ export default function EditBasicInfoScreen() {
             // In a real app, we would validate here
 
             // Update database
-            // await updateUserProfile(session.user.id, formData);
+            const updatedUser = await updateUserProfile(session.user.id, formData);
 
-            // Update local store (simulated for now)
-            if (currentUser) {
-                const updatedUser = {
-                    ...currentUser,
-                    ...formData,
-                };
+            // Update local store with the returned user from the database
+            if (updatedUser) {
                 setCurrentUser(updatedUser);
             }
+
 
             Alert.alert('Success', 'Profile updated successfully', [
                 { text: 'OK', onPress: () => router.back() }
             ]);
         } catch (error) {
+            console.error('Error updating profile:', error);
             Alert.alert('Error', 'Failed to update profile');
         } finally {
             setIsLoading(false);

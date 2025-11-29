@@ -18,16 +18,17 @@ import {
   syncInteraction,
 } from './supabaseSync';
 
-// ❌ OLD (BROKEN)
-// import { isDecisionCorrect } from './testProfiles';
-
-// ✅ NEW — SAFE FALLBACK (profiles no longer have correctness logic)
 function isDecisionCorrect(
-  _profileType: 'positive' | 'neutral' | 'negative',
-  _decision: 'like' | 'pass' | 'block'
+  profileType: 'positive' | 'neutral' | 'negative',
+  decision: 'like' | 'pass' | 'block'
 ): boolean {
-  // For now all decisions are considered correct.
-  // This prevents crashes and keeps A/B logging valid.
+  if (profileType === 'positive') {
+    return decision === 'like';
+  }
+  if (profileType === 'negative') {
+    return decision === 'pass' || decision === 'block';
+  }
+  // For neutral profiles, any decision is considered valid/correct behavior
   return true;
 }
 

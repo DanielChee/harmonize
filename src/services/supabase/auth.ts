@@ -23,11 +23,7 @@ export interface SignInData {
   password: string;
 }
 
-// Test admin credentials for bypassing auth during development
-const TEST_ADMIN = {
-  email: "test@admin.com",
-  password: "test1234",
-};
+
 
 /**
  * Sign up a new user with email, password, and username
@@ -101,31 +97,6 @@ export async function signUp({ email, password, username }: SignUpData): Promise
  */
 export async function signIn({ email, password }: SignInData): Promise<AuthResult> {
   // Check for test admin bypass
-  if (email === TEST_ADMIN.email && password === TEST_ADMIN.password) {
-    console.log("[Auth] Test admin bypass - creating mock session");
-
-    // Create a mock user and session for test admin
-    const mockUser = {
-      id: "00000000-0000-0000-0000-000000000001",
-      email: TEST_ADMIN.email,
-      app_metadata: {},
-      user_metadata: { username: "test_admin" },
-      aud: "authenticated",
-      created_at: new Date().toISOString(),
-    } as unknown as import("@supabase/supabase-js").User;
-
-    const mockSession = {
-      access_token: "test_admin_token",
-      refresh_token: "test_admin_refresh",
-      expires_in: 3600,
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      token_type: "bearer",
-      user: mockUser,
-    } as unknown as import("@supabase/supabase-js").Session;
-
-    console.log("[Auth] Test admin sign in successful");
-    return { user: mockUser, session: mockSession, error: null };
-  }
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,

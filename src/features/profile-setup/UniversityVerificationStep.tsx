@@ -9,15 +9,17 @@ import { COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { Input } from '@components/common/Input';
 import { Button } from '@components/common/Button';
 import { MaterialIcons } from '@expo/vector-icons';
+import { sendVerificationEmail, verifyCode } from '@services/supabase/verification';
+import { useUserStore } from '@store';
 
 interface UniversityVerificationStepProps {
   formData: {
     university: string;
     academic_field: string;
     academic_year: string;
-    student_email: string;
   };
   updateFormData: (updates: Partial<UniversityVerificationStepProps['formData']>) => void;
+  isVerified?: boolean;
 }
 
 const ACADEMIC_YEAR_OPTIONS = [
@@ -31,273 +33,123 @@ const ACADEMIC_YEAR_OPTIONS = [
 export const UniversityVerificationStep: React.FC<UniversityVerificationStepProps> = ({
   formData,
   updateFormData,
+  isVerified: initialVerified = false,
 }) => {
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
-  const [isEditingUniversity, setIsEditingUniversity] = useState(false);
-  const [editedUniversity, setEditedUniversity] = useState('');
+  const { session } = useUserStore();
+  const [eduEmail, setEduEmail] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [isVerified, setIsVerified] = useState(initialVerified);
+  const [loading, setLoading] = useState(false);
 
-  const isValidStudentEmail = (email: string): boolean => {
-    // Basic validation - check for common student email patterns
-    const studentEmailPatterns = [
-      /@.*\.edu$/i,
-      /@gatech\.edu$/i,
-      /@emory\.edu$/i,
-      /@uga\.edu$/i,
-      /@gsu\.edu$/i,
-    ];
-    
-    return studentEmailPatterns.some(pattern => pattern.test(email));
+  const handleSendCode = async () => {
+    if (!eduEmail.trim().endsWith('.edu')) {
+      Alert.alert('Invalid Email', 'Please enter a valid .edu email address.');
+      return;
+    }
+
+    if (!session?.user?.id) {
+      Alert.alert('Error', 'User session not found.');
+      return;
+    }
+
+    setLoading(true);
+    const result = await sendVerificationEmail(session.user.id, eduEmail.trim());
+    setLoading(false);
+
+    if (result.success) {
+      setVerificationSent(true);
+      Alert.alert('Code Sent', result.message);
+    } else {
+      Alert.alert('Error', result.message || 'Failed to send code.');
+    }
   };
 
-  const extractUniversityFromEmail = (email: string): string => {
-    const domain = email.split('@')[1]?.toLowerCase();
-    if (!domain) return '';
-
-    // Comprehensive map of email domains to university names
-    const domainMap: Record<string, string> = {
-      // Georgia Universities
-      'gatech.edu': 'Georgia Institute of Technology',
-      'emory.edu': 'Emory University',
-      'uga.edu': 'University of Georgia',
-      'gsu.edu': 'Georgia State University',
-      'kennesaw.edu': 'Kennesaw State University',
-      'georgiasouthern.edu': 'Georgia Southern University',
-      'georgiacollege.edu': 'Georgia College & State University',
-      'valdosta.edu': 'Valdosta State University',
-      'westga.edu': 'University of West Georgia',
-      
-      // Other common universities
-      'mit.edu': 'Massachusetts Institute of Technology',
-      'harvard.edu': 'Harvard University',
-      'stanford.edu': 'Stanford University',
-      'berkeley.edu': 'University of California, Berkeley',
-      'ucla.edu': 'University of California, Los Angeles',
-      'usc.edu': 'University of Southern California',
-      'nyu.edu': 'New York University',
-      'columbia.edu': 'Columbia University',
-      'yale.edu': 'Yale University',
-      'princeton.edu': 'Princeton University',
-      'cornell.edu': 'Cornell University',
-      'upenn.edu': 'University of Pennsylvania',
-      'uchicago.edu': 'University of Chicago',
-      'northwestern.edu': 'Northwestern University',
-      'umich.edu': 'University of Michigan',
-      'uiuc.edu': 'University of Illinois Urbana-Champaign',
-      'utexas.edu': 'University of Texas at Austin',
-      'tamu.edu': 'Texas A&M University',
-      'vt.edu': 'Virginia Tech',
-      'ufl.edu': 'University of Florida',
-      'fsu.edu': 'Florida State University',
-      'miami.edu': 'University of Miami',
-      'ncsu.edu': 'North Carolina State University',
-      'unc.edu': 'University of North Carolina',
-      'duke.edu': 'Duke University',
-      'wfu.edu': 'Wake Forest University',
-      'udel.edu': 'University of Delaware',
-      'rutgers.edu': 'Rutgers University',
-      'temple.edu': 'Temple University',
-      'psu.edu': 'Pennsylvania State University',
-      'cmu.edu': 'Carnegie Mellon University',
-      'pitt.edu': 'University of Pittsburgh',
-      'osu.edu': 'Ohio State University',
-      'case.edu': 'Case Western Reserve University',
-      'msu.edu': 'Michigan State University',
-      'wisc.edu': 'University of Wisconsin',
-      'uiowa.edu': 'University of Iowa',
-      'uoregon.edu': 'University of Oregon',
-      'washington.edu': 'University of Washington',
-      'asu.edu': 'Arizona State University',
-      'uaz.edu': 'University of Arizona',
-      'colorado.edu': 'University of Colorado',
-      'cu.edu': 'University of Colorado',
-    };
-
-    // Check exact match first
-    if (domainMap[domain]) {
-      return domainMap[domain];
+  const handleVerify = async () => {
+    if (!verificationCode.trim()) {
+        Alert.alert('Missing Code', 'Please enter the verification code.');
+        return;
     }
 
-    // If it's a .edu domain but not in our map, try to format it nicely
-    if (domain.endsWith('.edu')) {
-      const parts = domain.split('.');
-      if (parts.length >= 2) {
-        // Remove .edu and format the domain name
-        const domainName = parts.slice(0, -1).join('.');
-        // Capitalize each word
-        const formatted = domainName
-          .split('.')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
-        return formatted + ' University';
-      }
-    }
+    if (!session?.user?.id) return;
 
-    return '';
-  };
+    setLoading(true);
+    const result = await verifyCode(session.user.id, eduEmail.trim(), verificationCode.trim());
+    setLoading(false);
 
-  const handleVerifyEmail = async () => {
-    if (!formData.student_email.trim()) {
-      Alert.alert('Error', 'Please enter your student email address.');
-      return;
-    }
-
-    if (!isValidStudentEmail(formData.student_email)) {
-      Alert.alert(
-        'Invalid Email',
-        'Please enter a valid student email address (.edu domain).'
-      );
-      return;
-    }
-
-    if (!formData.university) {
-      Alert.alert(
-        'University Not Detected',
-        'We could not detect your university from your email. Please ensure you entered a valid .edu email address.'
-      );
-      return;
-    }
-
-    setIsVerifying(true);
-    
-    try {
-      // Simulate verification process
-      // In production, you'd send a verification email here
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
+    if (result.success) {
       setIsVerified(true);
-      Alert.alert(
-        'Verification Email Sent',
-        'Please check your student email and click the verification link. Your university will be verified once you confirm.'
-      );
-    } catch (error) {
-      console.error('Error verifying email:', error);
-      Alert.alert('Error', 'Failed to send verification email. Please try again.');
-    } finally {
-      setIsVerifying(false);
+      const domain = eduEmail.split('@')[1];
+      // Simple heuristic for university name, ideally backend does this
+      const uniName = domain.split('.')[0].toUpperCase(); 
+      updateFormData({ university: uniName });
+      Alert.alert('Success', 'University verified successfully!');
+    } else {
+      Alert.alert('Verification Failed', result.message || 'Invalid code.');
     }
-  };
-
-  const handleSkip = () => {
-    Alert.alert(
-      'Skip Verification',
-      'You can always verify your university later from your profile settings.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Skip', onPress: () => {} },
-      ]
-    );
   };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <MaterialIcons name="school" size={48} color={COLORS.primary} />
-        <Text style={styles.title}>University Verification</Text>
+        <Text style={styles.title}>Academic Information</Text>
         <Text style={styles.description}>
-          Verify your student status to connect with others at your university. This is optional but helps you find better matches!
+          Share your academic details to help connect with peers from your university.
         </Text>
       </View>
 
-      {/* Student Email */}
+      {/* University Verification Section */}
       <View style={styles.section}>
-        <Input
-          label="Student Email Address *"
-          placeholder="your.name@university.edu"
-          value={formData.student_email}
-          onChangeText={(text) => {
-            updateFormData({ student_email: text });
-            setIsVerified(false);
-            
-            // Auto-detect university from email domain
-            if (isValidStudentEmail(text)) {
-              const detectedUniversity = extractUniversityFromEmail(text);
-              if (detectedUniversity) {
-                updateFormData({ university: detectedUniversity });
-              }
-            } else {
-              // Clear university if email is invalid or incomplete
-              updateFormData({ university: '' });
-            }
-          }}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          editable={!isVerified}
-        />
+        <Text style={styles.label}>University Verification (Optional)</Text>
         
-        {/* Auto-detected University Display */}
-        {formData.university && isValidStudentEmail(formData.student_email) && !isEditingUniversity && (
-          <View style={styles.universityDisplay}>
-            <MaterialIcons name="school" size={20} color={COLORS.primary} />
-            <View style={styles.universityInfo}>
-              <Text style={styles.universityLabel}>Detected University</Text>
-              <Text style={styles.universityName}>{formData.university}</Text>
+        {!isVerified ? (
+            <>
+                <Input
+                    placeholder="yourname@university.edu"
+                    value={eduEmail}
+                    onChangeText={setEduEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    editable={!verificationSent}
+                />
+                
+                {!verificationSent ? (
+                    <Button 
+                        title="Send Verification Code"
+                        onPress={handleSendCode}
+                        loading={loading}
+                        disabled={loading || !eduEmail}
+                        style={styles.verifyButton}
+                    />
+                ) : (
+                    <View style={styles.codeSection}>
+                        <Text style={styles.subLabel}>Enter the code sent to your email:</Text>
+                        <Input
+                            placeholder="123456"
+                            value={verificationCode}
+                            onChangeText={setVerificationCode}
+                            keyboardType="number-pad"
+                            maxLength={6}
+                        />
+                        <Button 
+                            title="Verify Code"
+                            onPress={handleVerify}
+                            loading={loading}
+                            disabled={loading || !verificationCode}
+                            style={styles.verifyButton}
+                        />
+                        <TouchableOpacity onPress={() => setVerificationSent(false)} style={styles.resendLink}>
+                            <Text style={styles.resendText}>Change email or resend</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </>
+        ) : (
+            <View style={styles.verifiedBadge}>
+                <MaterialIcons name="check-circle" size={24} color={COLORS.success} />
+                <Text style={styles.verifiedText}>Verified: {eduEmail}</Text>
             </View>
-            <TouchableOpacity
-              onPress={() => {
-                setEditedUniversity(formData.university);
-                setIsEditingUniversity(true);
-              }}
-              style={styles.editButton}
-            >
-              <MaterialIcons name="edit" size={18} color={COLORS.text.secondary} />
-            </TouchableOpacity>
-          </View>
-        )}
-        
-        {/* Edit University Input */}
-        {isEditingUniversity && (
-          <View style={styles.editUniversityContainer}>
-            <Input
-              label="University Name"
-              placeholder="Enter university name"
-              value={editedUniversity}
-              onChangeText={setEditedUniversity}
-              autoCapitalize="words"
-            />
-            <View style={styles.editActions}>
-              <TouchableOpacity
-                onPress={() => {
-                  setIsEditingUniversity(false);
-                  setEditedUniversity('');
-                }}
-                style={[styles.editActionButton, styles.cancelButton]}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  if (editedUniversity.trim()) {
-                    updateFormData({ university: editedUniversity.trim() });
-                  }
-                  setIsEditingUniversity(false);
-                  setEditedUniversity('');
-                }}
-                style={[styles.editActionButton, styles.saveButton]}
-              >
-                <Text style={styles.saveButtonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-        
-        {formData.student_email && isValidStudentEmail(formData.student_email) && !isVerified && (
-          <Button
-            title="Send Verification Email"
-            onPress={handleVerifyEmail}
-            loading={isVerifying}
-            fullWidth
-            style={styles.verifyButton}
-          />
-        )}
-        {isVerified && (
-          <View style={styles.verifiedBadge}>
-            <MaterialIcons name="check-circle" size={20} color={COLORS.success} />
-            <Text style={styles.verifiedText}>
-              Verification email sent! Check your inbox.
-            </Text>
-          </View>
         )}
       </View>
 
@@ -388,6 +240,23 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.sizes.xs,
     color: COLORS.text.secondary,
     marginBottom: SPACING.sm,
+  },
+  codeSection: {
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  resendLink: {
+    alignItems: 'center',
+    marginTop: SPACING.md,
+  },
+  resendText: {
+    color: COLORS.primary,
+    fontSize: TYPOGRAPHY.sizes.sm,
+    textDecorationLine: 'underline',
   },
   verifyButton: {
     marginTop: SPACING.sm,

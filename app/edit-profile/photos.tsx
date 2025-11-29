@@ -5,6 +5,7 @@ import { COLORS, SPACING } from '@constants';
 import { Button } from '@components';
 import { ProfilePictureStep } from '@features/profile-setup/ProfilePictureStep';
 import { useUserStore } from '@store';
+import { updateUserProfile } from '@services/supabase/user';
 
 export default function EditPhotosScreen() {
     const router = useRouter();
@@ -31,12 +32,9 @@ export default function EditPhotosScreen() {
 
         setIsLoading(true);
         try {
-            // Update local store (simulated)
-            if (currentUser) {
-                const updatedUser = {
-                    ...currentUser,
-                    ...formData,
-                };
+            const updatedUser = await updateUserProfile(session.user.id, formData);
+
+            if (updatedUser) {
                 setCurrentUser(updatedUser);
             }
 
@@ -44,6 +42,7 @@ export default function EditPhotosScreen() {
                 { text: 'OK', onPress: () => router.back() }
             ]);
         } catch (error) {
+            console.error('Error updating profile picture:', error);
             Alert.alert('Error', 'Failed to update profile picture');
         } finally {
             setIsLoading(false);

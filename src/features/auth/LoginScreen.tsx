@@ -5,7 +5,7 @@
 
 import { BORDER_RADIUS, COLORS, SPACING, TYPOGRAPHY } from '@constants';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -48,33 +48,7 @@ export function LoginScreen() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
 
-  // Check for existing session on mount
-  useEffect(() => {
-    checkExistingSession();
-  }, []);
-
-  // Debounced username availability check
-  useEffect(() => {
-    if (!isSignUp || !username || username.length < 3) {
-      setUsernameStatus('idle');
-      return;
-    }
-
-    if (!isValidUsername(username)) {
-      setUsernameStatus('idle');
-      return;
-    }
-
-    setUsernameStatus('checking');
-    const timeout = setTimeout(async () => {
-      const available = await checkUsernameAvailable(username);
-      setUsernameStatus(available ? 'available' : 'taken');
-    }, 500);
-
-    return () => clearTimeout(timeout);
-  }, [username, isSignUp]);
-
-  const checkExistingSession = async () => {
+  const checkExistingSession = useCallback(async () => {
     try {
       const existingSession = await getSession();
       if (existingSession?.user) {
@@ -98,7 +72,12 @@ export function LoginScreen() {
     } finally {
       setIsCheckingSession(false);
     }
-  };
+  }, [router, setSession, setCurrentUser]);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    checkExistingSession();
+  }, [checkExistingSession]);
 
   const validateForm = (): string | null => {
     if (!email.trim()) {

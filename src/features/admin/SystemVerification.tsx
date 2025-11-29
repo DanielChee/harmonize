@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '@constants';
+import { COLORS, SPACING, BORDER_RADIUS } from '@constants';
 import { VerificationSuite, TestResult } from '@features/testing/VerificationSuite';
 
 export function SystemVerification() {

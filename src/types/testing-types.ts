@@ -56,6 +56,9 @@ export interface TestProfile extends BaseProfile {
   // Music Data for Matching
   top_genres: string[];
   top_artists: string[];
+  top_songs: string[];
+  artist_images: string[];
+  song_images: string[];
 
 }
 

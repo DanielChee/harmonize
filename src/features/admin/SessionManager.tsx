@@ -1,68 +1,111 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '@constants';
 import { useABTestStore } from '@store';
 import { MaterialIcons } from '@expo/vector-icons';
-
-// Mock data for sessions since we don't have a real backend for this yet
-const MOCK_SESSIONS = [
-    { id: 'sess_001', userId: 'user_123', variant: 'A', status: 'active', startTime: Date.now() - 3600000 },
-    { id: 'sess_002', userId: 'user_456', variant: 'B', status: 'completed', startTime: Date.now() - 7200000 },
-    { id: 'sess_003', userId: 'user_789', variant: 'A', status: 'active', startTime: Date.now() - 1800000 },
-];
+import { supabase } from '@services/supabase/supabase';
 
 export function SessionManager() {
     const { variant, setVariant } = useABTestStore();
-    const [sessions, setSessions] = useState(MOCK_SESSIONS);
+    const [sessions, setSessions] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const toggleVariant = (sessionId: string, currentVariant: string) => {
+    useEffect(() => {
+        fetchSessions();
+    }, []);
+
+    const fetchSessions = async () => {
+        setIsLoading(true);
+        try {
+            // Ideally we'd have a sessions table, but for now we'll query recent AB test assignments
+            // This serves as a proxy for "active sessions" in this context
+            const { data, error } = await supabase
+                .from('ab_test_assignments')
+                .select('*')
+                .order('assigned_at', { ascending: false })
+                .limit(20);
+
+            if (error) throw error;
+            setSessions(data || []);
+        } catch (error) {
+            console.error('Error fetching sessions:', error);
+            Alert.alert('Error', 'Failed to fetch sessions');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const toggleVariant = async (assignmentId: string, currentVariant: string, userId: string) => {
         const newVariant = currentVariant === 'A' ? 'B' : 'A';
 
-        // Update local state
-        setSessions(prev => prev.map(s =>
-            s.id === sessionId ? { ...s, variant: newVariant } : s
-        ));
+        try {
+            // Optimistic update
+            setSessions(prev => prev.map(s =>
+                s.id === assignmentId ? { ...s, assigned_variant: newVariant } : s
+            ));
 
-        // If it's the current user's session, update the store
-        // In a real app, this would update the backend
-        if (sessionId === 'sess_001') { // Assuming current user is sess_001 for demo
-            setVariant(newVariant as 'A' | 'B');
-            Alert.alert('Variant Updated', `Switched to Variant ${newVariant}`);
+            const { error } = await supabase
+                .from('ab_test_assignments')
+                .update({ assigned_variant: newVariant })
+                .eq('id', assignmentId);
+
+            if (error) throw error;
+
+            // If it's the current user's session/assignment, update the store
+            // We check against the store's userId if available, or just if it matches the current device
+            // For now, we'll just alert if it was successful. 
+            // In a real app, we'd check if (userId === currentUser.id) setVariant(newVariant);
+            
+        } catch (error) {
+            console.error('Error updating variant:', error);
+            Alert.alert('Error', 'Failed to update variant');
+            fetchSessions(); // Revert on error
         }
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Active Sessions</Text>
-            <FlatList
-                data={sessions}
-                keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                    <View style={styles.sessionCard}>
-                        <View>
-                            <Text style={styles.userId}>User: {item.userId}</Text>
-                            <Text style={styles.sessionInfo}>
-                                Started: {new Date(item.startTime).toLocaleTimeString()} • Status: {item.status}
-                            </Text>
-                        </View>
+            <View style={styles.header}>
+                <Text style={styles.title}>User Assignments</Text>
+                <TouchableOpacity onPress={fetchSessions} disabled={isLoading}>
+                    <MaterialIcons name="refresh" size={24} color={COLORS.primary} />
+                </TouchableOpacity>
+            </View>
 
-                        <TouchableOpacity
-                            style={[
-                                styles.variantBadge,
-                                { backgroundColor: item.variant === 'A' ? COLORS.primary : COLORS.secondary }
-                            ]}
-                            onPress={() => toggleVariant(item.id, item.variant)}
-                        >
-                            <Text style={styles.variantText}>Variant {item.variant}</Text>
-                            <MaterialIcons name="swap-horiz" size={16} color="white" />
-                        </TouchableOpacity>
-                    </View>
-                )}
-            />
+            {isLoading ? (
+                <ActivityIndicator size="large" color={COLORS.primary} />
+            ) : (
+                <FlatList
+                    data={sessions}
+                    keyExtractor={item => item.id}
+                    renderItem={({ item }) => (
+                        <View style={styles.sessionCard}>
+                            <View>
+                                <Text style={styles.userId}>User: {item.user_id.substring(0, 8)}...</Text>
+                                <Text style={styles.sessionInfo}>
+                                    Assigned: {new Date(item.assigned_at).toLocaleDateString()}
+                                </Text>
+                            </View>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.variantBadge,
+                                    { backgroundColor: item.assigned_variant === 'A' ? COLORS.primary : COLORS.secondary }
+                                ]}
+                                onPress={() => toggleVariant(item.id, item.assigned_variant, item.user_id)}
+                            >
+                                <Text style={styles.variantText}>Variant {item.assigned_variant}</Text>
+                                <MaterialIcons name="swap-horiz" size={16} color="white" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                    ListEmptyComponent={<Text style={styles.emptyText}>No active assignments found.</Text>}
+                />
+            )}
 
             <View style={styles.debugSection}>
-                <Text style={styles.debugTitle}>Current Device Debug</Text>
-                <Text>Current Assigned Variant: {variant}</Text>
+                <Text style={styles.debugTitle}>Device Controls (Feature Flags)</Text>
+                <Text style={styles.debugSubtitle}>Force variant on this device only:</Text>
                 <View style={styles.buttonRow}>
                     <TouchableOpacity
                         style={[styles.debugButton, variant === 'A' && styles.activeButton]}
@@ -87,10 +130,15 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: SPACING.md,
     },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: SPACING.md,
+    },
     title: {
         fontSize: 18,
         fontWeight: 'bold',
-        marginBottom: SPACING.md,
         color: COLORS.text.primary,
     },
     sessionCard: {
@@ -134,17 +182,23 @@ const styles = StyleSheet.create({
     },
     debugTitle: {
         fontWeight: 'bold',
+        marginBottom: SPACING.xs,
+    },
+    debugSubtitle: {
+        fontSize: 12,
+        color: COLORS.text.secondary,
         marginBottom: SPACING.sm,
     },
     buttonRow: {
         flexDirection: 'row',
         gap: SPACING.md,
-        marginTop: SPACING.sm,
     },
     debugButton: {
         padding: SPACING.sm,
         backgroundColor: COLORS.text.secondary,
         borderRadius: BORDER_RADIUS.sm,
+        flex: 1,
+        alignItems: 'center',
     },
     activeButton: {
         backgroundColor: COLORS.primary,
@@ -152,5 +206,11 @@ const styles = StyleSheet.create({
     debugButtonText: {
         color: 'white',
         fontSize: 12,
+        fontWeight: '600',
+    },
+    emptyText: {
+        textAlign: 'center',
+        color: COLORS.text.secondary,
+        marginTop: SPACING.xl,
     },
 });

@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '@constants';
 import { useABTestStore } from '@store';
-import type { ProfileInteractionMetrics, UserVariantAssignment } from '@types';
+import type { ProfileInteractionMetrics } from '@types';
 import { getAllInteractions, exportABTestData } from '@utils/abTestTracking';
 
 export function AnalyticsViewer() {

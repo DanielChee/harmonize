@@ -24,10 +24,10 @@ interface BasicInfoStepProps {
 }
 
 const MBTI_OPTIONS = [
-  'INTJ', 'INTP', 'ENTJ', 'ENTP',
-  'INFJ', 'INFP', 'ENFJ', 'ENFP',
-  'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
-  'ISTP', 'ISFP', 'ESTP', 'ESFP',
+  `INTJ`, `INTP`, `ENTJ`, `ENTP`,
+  `INFJ`, `INFP`, `ENFJ`, `ENFP`,
+  `ISTJ`, `ISFJ`, `ESTJ`, `ESFJ`,
+  `ISTP`, `ISFP`, `ESTP`, `ESFP`,
 ];
 
 const PRONOUNS_OPTIONS = [
@@ -45,7 +45,7 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ formData, updateFo
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <Text style={styles.description}>
-        Let's start with the basics. This information helps others get to know you.
+        Let&apos;s start with the basics. This information helps others get to know you.
       </Text>
 
       {/* Display Name */}

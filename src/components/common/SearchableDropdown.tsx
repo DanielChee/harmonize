@@ -237,7 +237,7 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       translateY.setValue(0);
       setModalHeight(0.8);
     }
-  }, [isOpen]);
+  }, [isOpen, translateY]);
 
   return (
     <View style={styles.container}>

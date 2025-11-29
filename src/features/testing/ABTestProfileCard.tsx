@@ -4,7 +4,7 @@
  * Includes silent tracking of user behavior
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import type { TestProfile } from '@types';
 import { useABTestStore } from '@store';
@@ -13,41 +13,33 @@ import { ProfileCardB } from './ProfileCardB';
 
 interface ABTestProfileCardProps {
   profile: TestProfile;
-  onDecision?: (decision: 'like' | 'pass' | 'block') => void;
 }
 
-export function ABTestProfileCard({ profile, onDecision }: ABTestProfileCardProps) {
-  const { variant, trackView, trackDecision } = useABTestStore();
-  const [profileLoadTime, setProfileLoadTime] = useState<number>(0);
+export function ABTestProfileCard({ profile }: ABTestProfileCardProps) {
+  const { variant, trackView } = useABTestStore();
 
   // Track when profile is viewed
   useEffect(() => {
     const startTracking = async () => {
-      const loadTime = await trackView(profile.id, profile.profileType);
-      setProfileLoadTime(loadTime);
+      await trackView(profile.id, profile.profileType);
     };
 
     startTracking();
-  }, [profile.id]);
-
-  // Handle user decision (like/pass/block)
-  const handleDecision = async (decision: 'like' | 'pass' | 'block') => {
-    // Track the decision
-    await trackDecision(profile.id, profile.profileType, profileLoadTime, decision);
-
-    // Call parent handler if provided
-    if (onDecision) {
-      onDecision(decision);
-    }
-  };
-
-  // Expose decision handler to parent via ref or context if needed
-  // For now, parent can pass onDecision callback
+  }, [profile.id, profile.profileType, trackView]);
 
   return (
     <View style={styles.container}>
       {variant === 'A' && <ProfileCardA profile={profile} />}
-      {variant === 'B' && <ProfileCardB profile={profile} />}
+      {variant === 'B' && (
+        <ProfileCardB 
+          profile={profile} 
+          profilePictureUrl={profile.image}
+          topGenres={profile.top_genres}
+          topArtists={profile.top_artists}
+          topSongs={profile.top_songs}
+          concertsAttended={profile.concertsAttended}
+        />
+      )}
     </View>
   );
 }
