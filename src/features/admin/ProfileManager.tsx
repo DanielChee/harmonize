@@ -4,7 +4,7 @@ import { COLORS, SPACING, BORDER_RADIUS } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getAllProfiles, deleteProfile, updateUserProfile } from '@services/supabase/user';
 import { syncUserImagesFromSpotify } from '@services/spotify/admin';
-import { isAuthenticated, searchArtists, searchTracks } from '@services/spotify';
+import { searchSpotifyArtistsPublic, searchSpotifyTracksPublic } from '@services/spotify/client-credentials';
 import { TEST_PROFILES } from '@utils/testProfiles';
 import type { User } from '@types';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,8 +18,7 @@ export function ProfileManager() {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
     
-    // Spotify Search State
-    const [isAdminSpotifyConnected, setIsAdminSpotifyConnected] = useState(false);
+    // Search State
     const [searchQuery, setSearchQuery] = useState('');
     const [searchType, setSearchType] = useState<'artist' | 'track'>('artist');
     const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -39,13 +38,7 @@ export function ProfileManager() {
 
     useEffect(() => {
         loadProfiles();
-        checkSpotifyConnection();
     }, []);
-
-    const checkSpotifyConnection = async () => {
-        const connected = await isAuthenticated();
-        setIsAdminSpotifyConnected(connected);
-    };
 
     const handleSearch = async (text: string) => {
         setSearchQuery(text);
@@ -57,11 +50,11 @@ export function ProfileManager() {
         setIsSearching(true);
         try {
             if (searchType === 'artist') {
-                const results = await searchArtists(text, 5);
-                setSearchResults(results.items);
+                const results = await searchSpotifyArtistsPublic(text, 5);
+                setSearchResults(results);
             } else {
-                const results = await searchTracks(text, undefined, 5);
-                setSearchResults(results.items);
+                const results = await searchSpotifyTracksPublic(text, 5);
+                setSearchResults(results);
             }
         } catch (error) {
             console.error(error);
@@ -70,34 +63,49 @@ export function ProfileManager() {
         }
     };
 
-    const addSearchResult = (item: any) => {
-        if (searchType === 'artist') {
-            const name = item.name;
-            const image = item.images[0]?.url || '';
+    const addSearchResult = async (item: any) => {
+        if (!editingUser) return;
+        
+        try {
+            // Get best image (Spotify specific structure)
+            const imageUrl = searchType === 'artist' 
+                ? (item.images?.[0]?.url || '') 
+                : (item.album?.images?.[0]?.url || '');
+
+            if (!imageUrl) {
+                Alert.alert('Error', 'No image found for this item.');
+                return;
+            }
+
+            // Directly use Spotify URL (No upload needed)
+            if (searchType === 'artist') {
+                const currentArtists = editForm.top_artists ? editForm.top_artists.split(',').map(s => s.trim()).filter(Boolean) : [];
+                const currentImages = editForm.artist_images ? editForm.artist_images.split(',').map(s => s.trim()).filter(Boolean) : [];
+                
+                setEditForm(prev => ({
+                    ...prev,
+                    top_artists: [...currentArtists, item.name].join(', '),
+                    artist_images: [...currentImages, imageUrl].join(', '),
+                }));
+            } else {
+                const artistName = item.artists?.[0]?.name || 'Unknown';
+                const name = `${item.name} - ${artistName}`;
+                const currentSongs = editForm.top_songs ? editForm.top_songs.split(',').map(s => s.trim()).filter(Boolean) : [];
+                const currentImages = editForm.song_images ? editForm.song_images.split(',').map(s => s.trim()).filter(Boolean) : [];
+                
+                setEditForm(prev => ({
+                    ...prev,
+                    top_songs: [...currentSongs, name].join(', '),
+                    song_images: [...currentImages, imageUrl].join(', '),
+                }));
+            }
             
-            const currentArtists = editForm.top_artists ? editForm.top_artists.split(',').map(s => s.trim()).filter(Boolean) : [];
-            const currentImages = editForm.artist_images ? editForm.artist_images.split(',').map(s => s.trim()).filter(Boolean) : [];
-            
-            setEditForm(prev => ({
-                ...prev,
-                top_artists: [...currentArtists, name].join(', '),
-                artist_images: [...currentImages, image].join(', '),
-            }));
-        } else {
-            const name = `${item.name} - ${item.artists[0].name}`;
-            const image = item.album.images[0]?.url || '';
-            
-            const currentSongs = editForm.top_songs ? editForm.top_songs.split(',').map(s => s.trim()).filter(Boolean) : [];
-            const currentImages = editForm.song_images ? editForm.song_images.split(',').map(s => s.trim()).filter(Boolean) : [];
-            
-            setEditForm(prev => ({
-                ...prev,
-                top_songs: [...currentSongs, name].join(', '),
-                song_images: [...currentImages, image].join(', '),
-            }));
+            setSearchQuery('');
+            setSearchResults([]);
+
+        } catch (error: any) {
+            Alert.alert('Error', 'Failed to add item: ' + error.message);
         }
-        setSearchQuery('');
-        setSearchResults([]);
     };
 
     const loadProfiles = async () => {
@@ -127,6 +135,8 @@ export function ProfileManager() {
 
         setIsActionLoading(true);
         try {
+            const cleanList = (str: string) => str.split(',').map(s => s.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
+
             const updates: Partial<User> = {
                 display_name: editForm.display_name,
                 bio: editForm.bio,
@@ -134,8 +144,8 @@ export function ProfileManager() {
                 profile_picture_url: editForm.profile_picture_url,
                 top_artists: editForm.top_artists.split(',').map(s => s.trim()).filter(Boolean),
                 top_songs: editForm.top_songs.split(',').map(s => s.trim()).filter(Boolean),
-                artist_images: editForm.artist_images.split(',').map(s => s.trim()).filter(Boolean),
-                song_images: editForm.song_images.split(',').map(s => s.trim()).filter(Boolean),
+                artist_images: cleanList(editForm.artist_images),
+                song_images: cleanList(editForm.song_images),
             };
 
             const updatedUser = await updateUserProfile(editingUser.id, updates);
@@ -190,6 +200,7 @@ export function ProfileManager() {
                         try {
                             // 1. Fetch and upload images
                             const { artist_images, song_images } = await syncUserImagesFromSpotify(user);
+                            console.log('[Admin] Synced images:', { artist_images, song_images });
                             
                             // 2. Update user profile with new URLs
                             const updatedUser = await updateUserProfile(user.id, {
@@ -408,7 +419,6 @@ export function ProfileManager() {
                         </View>
 
                         <ScrollView style={styles.modalForm}>
-                            {isAdminSpotifyConnected && (
                                 <View style={styles.searchSection}>
                                     <Text style={styles.sectionTitle}>Add Music from Spotify</Text>
                                     <View style={styles.searchTypeRow}>
@@ -433,7 +443,7 @@ export function ProfileManager() {
                                         onChangeText={handleSearch}
                                     />
                                     
-                                    {isSearching && <ActivityIndicator size="small" color={COLORS.primary} />}
+                                    {(isSearching) && <ActivityIndicator size="small" color={COLORS.primary} />}
                                     
                                     {searchResults.length > 0 && (
                                         <View style={styles.resultsList}>
@@ -450,7 +460,6 @@ export function ProfileManager() {
                                         </View>
                                     )}
                                 </View>
-                            )}
 
                             <View style={styles.formGroup}>
                                 <Text style={styles.label}>Display Name</Text>

@@ -23,6 +23,8 @@ interface ProfilePreviewStepProps {
     top_genres: string[];
     top_artists: string[];
     top_songs: string[];
+    artist_images: { name: string; url: string }[];
+    song_images: { name: string; url: string }[];
     profile_picture_url: string;
     concert_budget: string;
     concert_seating: string;
@@ -70,6 +72,11 @@ export const ProfilePreviewStep: React.FC<ProfilePreviewStepProps> = ({
       harmonies: { count: 0, total: 0 },
     },
     totalReviews: 0, // Not applicable for preview
+    top_genres: formData.top_genres,
+    top_artists: formData.top_artists,
+    top_songs: formData.top_songs,
+    artist_images: formData.artist_images.map(img => img.url),
+    song_images: formData.song_images.map(img => img.url),
   };
 
   console.log('[ProfilePreviewStep] Rendering preview.');

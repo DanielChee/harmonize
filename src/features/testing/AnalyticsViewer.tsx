@@ -9,24 +9,37 @@ import { COLORS, SPACING, BORDER_RADIUS } from '@constants';
 import { useABTestStore } from '@store';
 import type { ProfileInteractionMetrics } from '@types';
 import { getAllInteractions, exportABTestData } from '@utils/abTestTracking';
+import { getAllProfiles } from '@services/supabase/user';
 
 export function AnalyticsViewer() {
   const { variant, assignment, resetData } = useABTestStore();
   const [allInteractions, setAllInteractions] = useState<ProfileInteractionMetrics[]>([]);
+  const [s5Stats, setS5Stats] = useState({ total: 0, manual: 0, spotify: 0 });
   const [loading, setLoading] = useState(true);
 
   // Load all interactions on mount
   useEffect(() => {
-    loadInteractions();
+    loadData();
   }, []);
 
-  const loadInteractions = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const interactions = await getAllInteractions();
+      const [interactions, profiles] = await Promise.all([
+        getAllInteractions(),
+        getAllProfiles()
+      ]);
+      
       setAllInteractions(interactions);
+
+      // Calculate Sprint 5 Stats
+      const total = profiles.length;
+      const manual = profiles.filter(p => p.sprint_5_variant === 'variant_a').length;
+      const spotify = profiles.filter(p => p.sprint_5_variant === 'variant_b').length;
+      setS5Stats({ total, manual, spotify });
+
     } catch (error) {
-      console.error('Failed to load interactions:', error);
+      console.error('Failed to load analytics data:', error);
     } finally {
       setLoading(false);
     }
@@ -127,6 +140,22 @@ export function AnalyticsViewer() {
           <View style={[styles.statCard, styles.blockCard]}>
             <Text style={styles.statValue}>{stats.blocks}</Text>
             <Text style={styles.statLabel}>Blocks</Text>
+          </View>
+        </View>
+
+        <Text style={[styles.sectionTitle, { marginTop: SPACING.md }]}>Sprint 5: Profile Creation</Text>
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{s5Stats.total}</Text>
+            <Text style={styles.statLabel}>Total Profiles</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: COLORS.text.secondary + '20' }]}>
+            <Text style={styles.statValue}>{s5Stats.manual}</Text>
+            <Text style={styles.statLabel}>Manual (A)</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: '#1DB95420' }]}>
+            <Text style={[styles.statValue, { color: '#1DB954' }]}>{s5Stats.spotify}</Text>
+            <Text style={styles.statLabel}>Spotify (B)</Text>
           </View>
         </View>
       </View>

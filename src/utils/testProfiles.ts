@@ -117,7 +117,7 @@ export const TEST_PROFILE_ALEX: TestProfile = {
   top_genres: ['Indie Rock', 'Alternative', 'Dream Pop', 'Shoegaze'],
   top_artists: ['Tame Impala', 'Beach House', 'Phoebe Bridgers', 'The Strokes', 'Vampire Weekend'],
   top_songs: [],
-  artist_images: [],
+  artist_images: ['https://i.scdn.co/image/ab6761610000e5ebe412a782245eb20d9626c601', 'https://i.scdn.co/image/ab6761610000e5ebb3e38a46a56a423d8f741c09', 'https://i.scdn.co/image/ab6761610000e5eb626686e362d30246e816cc5b', 'https://i.scdn.co/image/ab6761610000e5ebc3b137793230f4043feb0089', 'https://i.scdn.co/image/ab6761610000e5eb0bb49b0b71ab3f5871860617'],
   song_images: [],
 };
 
@@ -152,7 +152,7 @@ export const TEST_PROFILE_JORDAN: TestProfile = {
   top_genres: ['Hip Hop', 'R&B', 'Trap', 'Rap'],
   top_artists: ['Kendrick Lamar', 'J. Cole', 'Drake', 'SZA', 'Frank Ocean'],
   top_songs: [],
-  artist_images: [],
+  artist_images: ['https://i.scdn.co/image/ab6761610000e5eb39ba6dcd4355c03de0b50918', 'https://i.scdn.co/image/ab6761610000e5eb4b053c29fd4b317ff825f0dc', 'https://i.scdn.co/image/ab6761610000e5eb4293385d324db8558179afd9', 'https://i.scdn.co/image/ab6761610000e5ebfd0a9fb6c252a3ba44079acf', 'https://i.scdn.co/image/ab6761610000e5ebee3123e593174208f9754fab'],
   song_images: [],
 };
 
@@ -244,7 +244,7 @@ export const TEST_PROFILE_TAYLOR: TestProfile = {
   top_genres: ['Pop', 'EDM', 'Dance Pop', 'Electropop'],
   top_artists: ['Taylor Swift', 'Dua Lipa', 'Ariana Grande', 'Calvin Harris', 'The Chainsmokers'],
   top_songs: [],
-  artist_images: [],
+  artist_images: ['https://i.scdn.co/image/ab6761610000e5ebe2e8e7ff002a4afda1c7147e', 'https://i.scdn.co/image/ab6761610000e5eb0c68f6c95232e716f0abee8d', 'https://i.scdn.co/image/ab6761610000e5eb6725802588d7dc1aba076ca5', 'https://i.scdn.co/image/ab6761610000e5eb1e4bcd2bef1896648762dd6b', 'https://i.scdn.co/image/ab6761610000e5eb4567279fac84a0375c3d819b'],
   song_images: [],
 };
 

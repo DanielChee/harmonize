@@ -10,10 +10,10 @@ import { COLORS, SPACING, TYPOGRAPHY, MUSIC_GENRES } from '@constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SpotifyButton } from '@components/SpotifyButton';
 import { fetchAllSpotifyData, searchArtists, searchTracks, isAuthenticated, logoutFromSpotify } from '@services/spotify';
-import { uploadSpotifyImageBatch } from '@services/supabase/storage';
 import { useUserStore } from '@store';
 import type { SpotifyData } from '@types';
 import { Input } from '@components/common/Input';
+import { uploadSpotifyImageBatch } from '@services/supabase/storage';
 
 interface MusicTasteStepProps {
   formData: {
@@ -58,21 +58,24 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
 
   // Store image URLs for artists and songs
   // We initialize from formData if available
-  const [artistImages, setArtistImages] = useState<Record<string, string>>(() => {
+  const [artistImages, setArtistImages] = useState<Record<string, string>>({});
+  const [songImages, setSongImages] = useState<Record<string, string>>({});
+
+  useEffect(() => {
     const images: Record<string, string> = {};
     formData.artist_images?.forEach(img => {
       images[img.name] = img.url;
     });
-    return images;
-  });
+    setArtistImages(images);
+  }, [formData.artist_images]);
 
-  const [songImages, setSongImages] = useState<Record<string, string>>(() => {
+  useEffect(() => {
     const images: Record<string, string> = {};
     formData.song_images?.forEach(img => {
       images[img.name] = img.url;
     });
-    return images;
-  });
+    setSongImages(images);
+  }, [formData.song_images]);
 
   // Check if Spotify is already connected
   useEffect(() => {
@@ -88,10 +91,61 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     }
   };
 
+  const processSpotifyData = useCallback(async (data: SpotifyData) => {
+    const userId = session?.user?.id;
+    if (!userId) return;
 
+    setIsUploadingImages(true);
+
+    // Auto-populate form with Spotify data
+    const genresToSet = data.top_genres?.slice(0, MAX_GENRES) || [];
+    const artists = data.top_artists.slice(0, MAX_ARTISTS);
+    const tracks = data.top_tracks.slice(0, MAX_SONGS);
+
+    // Prepare items for upload (name, url)
+    const artistItems = artists.map(a => ({ name: a.name, url: a.image_url || '' }));
+    const songItems = tracks.map(t => ({ name: `${t.name} - ${t.artist}`, url: t.image_url || '' }));
+
+    // VERIFICATION LOG
+    console.log(`[UI Verify] Auto-populating from Spotify. Artists: ${artists.length}, Tracks: ${tracks.length}`);
+    console.log('[UI Verify] Uploading images to Supabase...');
+
+    // Batch Upload to Supabase Storage
+    const [uploadedArtists, uploadedSongs] = await Promise.all([
+      uploadSpotifyImageBatch(artistItems, userId, 'artists'),
+      uploadSpotifyImageBatch(songItems, userId, 'songs')
+    ]);
+
+    console.log('[UI Verify] Upload complete. Updating Form Data with Supabase URLs.');
+
+    // Update Form Data with Supabase URLs
+    updateFormData({
+      top_genres: genresToSet,
+      top_artists: artists.map(a => a.name),
+      top_songs: tracks.map(t => `${t.name} - ${t.artist}`),
+      artist_images: uploadedArtists, // Use the uploaded URLs
+      song_images: uploadedSongs,     // Use the uploaded URLs
+      sprint_5_variant: 'variant_b',
+    });
+
+    // Update local UI state
+    const newArtistImages: Record<string, string> = {};
+    uploadedArtists.forEach(item => {
+        if (item.url) newArtistImages[item.name] = item.url;
+    });
+    setArtistImages(newArtistImages);
+
+    const newSongImages: Record<string, string> = {};
+    uploadedSongs.forEach(item => {
+        if (item.url) newSongImages[item.name] = item.url;
+    });
+    setSongImages(newSongImages);
+
+    setIsUploadingImages(false);
+  }, [session?.user?.id, updateFormData]);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const loadSpotifyData = async () => {
+  const loadSpotifyData = useCallback(async () => {
     try {
       setIsLoadingSpotify(true);
       const data = await fetchAllSpotifyData();
@@ -104,9 +158,9 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     } finally {
       setIsLoadingSpotify(false);
     }
-  };
+  }, [processSpotifyData]);
 
-  const handleSpotifySuccess = async (data: SpotifyData) => {
+  const handleSpotifySuccess = useCallback(async (data: SpotifyData) => {
     _setSpotifyData(data); // Changed from setSpotifyData
     setIsSpotifyConnected(true);
     setIsLoadingSpotify(true); // Show loading while processing/uploading
@@ -118,59 +172,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
     } finally {
         setIsLoadingSpotify(false);
     }
-  };
-
-  const processSpotifyData = async (data: SpotifyData) => {
-    const userId = session?.user?.id;
-    if (!userId) return;
-
-    setIsUploadingImages(true);
-
-    // Auto-populate form with Spotify data
-    const genresToSet = data.top_genres?.slice(0, MAX_GENRES) || [];
-    const artists = data.top_artists.slice(0, MAX_ARTISTS);
-    const tracks = data.top_tracks.slice(0, MAX_SONGS);
-
-    // Prepare items for batch upload
-    const artistItems = artists
-      .filter(a => a.image_url)
-      .map(a => ({ name: a.name, url: a.image_url! }));
-
-    const songItems = tracks
-      .filter(t => t.image_url)
-      .map(t => ({ name: `${t.name} - ${t.artist}`, url: t.image_url! }));
-
-    // Upload images to Supabase Storage
-    const [uploadedArtists, uploadedSongs] = await Promise.all([
-      uploadSpotifyImageBatch(artistItems, userId, 'artists'),
-      uploadSpotifyImageBatch(songItems, userId, 'songs')
-    ]);
-
-    // Update Form Data with SECURE URLs
-    updateFormData({
-      top_genres: genresToSet,
-      top_artists: artists.map(a => a.name),
-      top_songs: tracks.map(t => `${t.name} - ${t.artist}`),
-      artist_images: uploadedArtists,
-      song_images: uploadedSongs,
-      sprint_5_variant: 'variant_b',
-    });
-
-    // Update local UI state
-    const newArtistImages: Record<string, string> = {};
-    uploadedArtists.forEach(item => {
-        newArtistImages[item.name] = item.url;
-    });
-    setArtistImages(newArtistImages);
-
-    const newSongImages: Record<string, string> = {};
-    uploadedSongs.forEach(item => {
-        newSongImages[item.name] = item.url;
-    });
-    setSongImages(newSongImages);
-
-    setIsUploadingImages(false);
-  };
+  }, [processSpotifyData]);
 
   const handleDisconnect = async () => {
     await logoutFromSpotify();
@@ -191,51 +193,63 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
   // Search for artists using Spotify API
   const searchForArtists = useCallback(async (query: string) => {
     if (!query.trim() || query.length < 2) {
-      setSearchResults({ ...searchResults, artists: [] });
+      setSearchResults(prev => ({ ...prev, artists: [] }));
       return;
     }
 
     try {
       setIsSearching(true);
-      const results = await searchArtists(query, 10);
-      const formattedArtists = results.items.map(artist => ({
-        id: artist.id,
-        name: artist.name,
-        image_url: artist.images[0]?.url,
-      }));
-      setSearchResults({ ...searchResults, artists: formattedArtists });
+      // Use fallback=true to allow public search without user login
+      const results = await searchArtists(query, 10, true);
+      const formattedArtists = results.items.map(artist => {
+        const imgUrl = artist.images?.[0]?.url;
+        // VERIFICATION LOG
+        console.log(`[UI Verify] Artist Search Result: "${artist.name}" -> Image: ${imgUrl || 'None'}`);
+        return {
+          id: artist.id,
+          name: artist.name,
+          image_url: imgUrl,
+        };
+      });
+      setSearchResults(prev => ({ ...prev, artists: formattedArtists }));
     } catch (error) {
       console.error("Error searching artists:", error);
-      setSearchResults({ ...searchResults, artists: [] });
+      setSearchResults(prev => ({ ...prev, artists: [] }));
     } finally {
       setIsSearching(false);
     }
-  }, [searchResults, setSearchResults, setIsSearching]);
+  }, [setIsSearching]);
 
   // Search for tracks using Spotify API
   const searchForTracks = useCallback(async (query: string) => {
     if (!query.trim() || query.length < 2) {
-      setSearchResults({ ...searchResults, tracks: [] });
+      setSearchResults(prev => ({ ...prev, tracks: [] }));
       return;
     }
 
     try {
       setIsSearching(true);
-      const results = await searchTracks(query, undefined, 10);
-      const formattedTracks = results.items.map(track => ({
-        id: track.id,
-        name: track.name,
-        artist: track.artists[0]?.name || 'Unknown Artist',
-        image_url: track.album.images[0]?.url,
-      }));
-      setSearchResults({ ...searchResults, tracks: formattedTracks });
+      // Use fallback=true to allow public search without user login
+      const results = await searchTracks(query, undefined, 10, true);
+      const formattedTracks = results.items.map(track => {
+        const imgUrl = track.album?.images?.[0]?.url;
+        // VERIFICATION LOG
+        console.log(`[UI Verify] Track Search Result: "${track.name}" -> Image: ${imgUrl || 'None'}`);
+        return {
+          id: track.id,
+          name: track.name,
+          artist: track.artists[0]?.name || 'Unknown Artist',
+          image_url: imgUrl,
+        };
+      });
+      setSearchResults(prev => ({ ...prev, tracks: formattedTracks }));
     } catch (error) {
       console.error("Error searching tracks:", error);
-      setSearchResults({ ...searchResults, tracks: [] });
+      setSearchResults(prev => ({ ...prev, tracks: [] }));
     } finally {
       setIsSearching(false);
     }
-  }, [searchResults, setSearchResults, setIsSearching]);
+  }, [setIsSearching]);
 
   const toggleGenre = (genre: string) => {
     const current = formData.top_genres || [];
@@ -255,9 +269,12 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
 
   const addArtist = (artistName: string, imageUrl?: string) => {
     const current = formData.top_artists || [];
+    const currentImages = formData.artist_images || [];
+
     if (!current.includes(artistName) && current.length < MAX_ARTISTS) {
       updateFormData({
         top_artists: [...current, artistName],
+        artist_images: [...currentImages, { name: artistName, url: imageUrl || '' }],
         sprint_5_variant: 'variant_a',
       });
       // Store image URL if provided
@@ -266,12 +283,17 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       }
     }
     setArtistSearchQuery('');
-    setSearchResults({ ...searchResults, artists: [] });
+    setSearchResults(prev => ({ ...prev, artists: [] }));
   };
 
   const removeArtist = (artistName: string) => {
     const current = formData.top_artists || [];
-    updateFormData({ top_artists: current.filter(a => a !== artistName) });
+    const currentImages = formData.artist_images || [];
+
+    updateFormData({ 
+        top_artists: current.filter(a => a !== artistName),
+        artist_images: currentImages.filter(img => img.name !== artistName),
+    });
     // Remove image URL
     setArtistImages(prev => {
       const updated = { ...prev };
@@ -283,9 +305,12 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
   const addSong = (songName: string, artistName: string, imageUrl?: string) => {
     const songString = `${songName} - ${artistName}`;
     const current = formData.top_songs || [];
+    const currentImages = formData.song_images || [];
+
     if (!current.includes(songString) && current.length < MAX_SONGS) {
       updateFormData({
         top_songs: [...current, songString],
+        song_images: [...currentImages, { name: songString, url: imageUrl || '' }],
         sprint_5_variant: 'variant_a',
       });
       // Store image URL if provided
@@ -294,12 +319,17 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       }
     }
     setTrackSearchQuery('');
-    setSearchResults({ ...searchResults, tracks: [] });
+    setSearchResults(prev => ({ ...prev, tracks: [] }));
   };
 
   const removeSong = (songString: string) => {
     const current = formData.top_songs || [];
-    updateFormData({ top_songs: current.filter(s => s !== songString) });
+    const currentImages = formData.song_images || [];
+
+    updateFormData({ 
+        top_songs: current.filter(s => s !== songString),
+        song_images: currentImages.filter(img => img.name !== songString),
+    });
     // Remove image URL
     setSongImages(prev => {
       const updated = { ...prev };
@@ -310,7 +340,7 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
 
   // Debounced search - search in both manual and Spotify modes if authenticated
   useEffect(() => {
-    if (artistSearchQuery && isSpotifyConnected && (formData.top_artists?.length || 0) < MAX_ARTISTS) {
+    if (artistSearchQuery && (formData.top_artists?.length || 0) < MAX_ARTISTS) {
       const timeout = setTimeout(() => {
         searchForArtists(artistSearchQuery);
       }, 500);
@@ -319,14 +349,11 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       // Clear search results if max reached
       setSearchResults(prev => ({ ...prev, artists: [] }));
       setArtistSearchQuery('');
-    } else {
-      // Clear search results if query is empty or not authenticated
-      setSearchResults(prev => ({ ...prev, artists: [] }));
     }
-  }, [artistSearchQuery, isSpotifyConnected, formData.top_artists, searchForArtists]);
+  }, [artistSearchQuery, formData.top_artists, searchForArtists]);
 
   useEffect(() => {
-    if (trackSearchQuery && isSpotifyConnected && (formData.top_songs?.length || 0) < MAX_SONGS) {
+    if (trackSearchQuery && (formData.top_songs?.length || 0) < MAX_SONGS) {
       const timeout = setTimeout(() => {
         searchForTracks(trackSearchQuery);
       }, 500);
@@ -335,11 +362,8 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
       // Clear search results if max reached
       setSearchResults(prev => ({ ...prev, tracks: [] }));
       setTrackSearchQuery('');
-    } else {
-      // Clear search results if query is empty or not authenticated
-      setSearchResults(prev => ({ ...prev, tracks: [] }));
     }
-  }, [trackSearchQuery, isSpotifyConnected, formData.top_songs, searchForTracks]);
+  }, [trackSearchQuery, formData.top_songs, searchForTracks]);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -468,22 +492,20 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
         {(formData.top_artists?.length || 0) < MAX_ARTISTS ? (
           <View>
             <Input
-              placeholder={isSpotifyConnected ? "Search for artists..." : "Enter artist name (press Enter to add)"}
+              placeholder="Search for artists..."
               value={artistSearchQuery}
               onChangeText={setArtistSearchQuery}
-              leftIcon={isSpotifyConnected ? <MaterialIcons name="search" size={20} color={COLORS.text.secondary} /> : undefined}
+              leftIcon={<MaterialIcons name="search" size={20} color={COLORS.text.secondary} />}
               onSubmitEditing={() => {
-                if (artistSearchQuery.trim() && !isSpotifyConnected) {
-                  // Only allow direct add if not authenticated (fallback to manual entry)
-                  addArtist(artistSearchQuery.trim());
-                }
+                // No manual fallback needed anymore, but keep if search fails?
+                // For now, rely on search.
               }}
               returnKeyType="done"
             />
-            {isSpotifyConnected && isSearching && (
+            {isSearching && (
               <ActivityIndicator size="small" color={COLORS.primary} style={styles.searchLoader} />
             )}
-            {isSpotifyConnected && searchResults.artists.length > 0 && (
+            {searchResults.artists.length > 0 && (
               <View style={styles.searchResults}>
                 {searchResults.artists.slice(0, 5).map((artist) => (
                   <TouchableOpacity
@@ -552,22 +574,19 @@ export const MusicTasteStep: React.FC<MusicTasteStepProps> = ({
         {(formData.top_songs?.length || 0) < MAX_SONGS ? (
           <View>
             <Input
-              placeholder={isSpotifyConnected ? "Search for songs..." : "Enter song name - artist (press Enter to add)"}
+              placeholder="Search for songs..."
               value={trackSearchQuery}
               onChangeText={setTrackSearchQuery}
-              leftIcon={isSpotifyConnected ? <MaterialIcons name="search" size={20} color={COLORS.text.secondary} /> : undefined}
+              leftIcon={<MaterialIcons name="search" size={20} color={COLORS.text.secondary} />}
               onSubmitEditing={() => {
-                if (trackSearchQuery.trim() && !isSpotifyConnected) {
-                  // Only allow direct add if not authenticated (fallback to manual entry)
-                  addSong(trackSearchQuery.trim(), '');
-                }
+                 // No manual fallback needed
               }}
               returnKeyType="done"
             />
-            {isSpotifyConnected && isSearching && (
+            {isSearching && (
               <ActivityIndicator size="small" color={COLORS.primary} style={styles.searchLoader} />
             )}
-            {isSpotifyConnected && searchResults.tracks.length > 0 && (
+            {searchResults.tracks.length > 0 && (
               <View style={styles.searchResults}>
                 {searchResults.tracks.slice(0, 5).map((track) => (
                   <TouchableOpacity

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { COLORS, SPACING, BORDER_RADIUS } from '@constants';
 import { useABTestStore } from '@store';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -7,7 +7,8 @@ import { supabase } from '@services/supabase/supabase';
 
 export function SessionManager() {
     const { variant, setVariant } = useABTestStore();
-    const [sessions, setSessions] = useState<any[]>([]);
+    const [sprint4Sessions, setSprint4Sessions] = useState<any[]>([]);
+    const [sprint5Sessions, setSprint5Sessions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
@@ -17,16 +18,27 @@ export function SessionManager() {
     const fetchSessions = async () => {
         setIsLoading(true);
         try {
-            // Ideally we'd have a sessions table, but for now we'll query recent AB test assignments
-            // This serves as a proxy for "active sessions" in this context
-            const { data, error } = await supabase
+            // Sprint 4: Review System (A/B Test Assignments)
+            const { data: s4Data, error: s4Error } = await supabase
                 .from('ab_test_assignments')
                 .select('*')
                 .order('assigned_at', { ascending: false })
                 .limit(20);
 
-            if (error) throw error;
-            setSessions(data || []);
+            if (s4Error) throw s4Error;
+            setSprint4Sessions(s4Data || []);
+
+            // Sprint 5: Profile Creation (Profiles table)
+            const { data: s5Data, error: s5Error } = await supabase
+                .from('profiles')
+                .select('id, username, display_name, sprint_5_variant, created_at')
+                .not('sprint_5_variant', 'is', null)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (s5Error) throw s5Error;
+            setSprint5Sessions(s5Data || []);
+
         } catch (error) {
             console.error('Error fetching sessions:', error);
             Alert.alert('Error', 'Failed to fetch sessions');
@@ -35,31 +47,15 @@ export function SessionManager() {
         }
     };
 
-    const toggleVariant = async (assignmentId: string, currentVariant: string, userId: string) => {
+    const toggleVariantS4 = async (assignmentId: string, currentVariant: string) => {
         const newVariant = currentVariant === 'A' ? 'B' : 'A';
-
         try {
-            // Optimistic update
-            setSessions(prev => prev.map(s =>
-                s.id === assignmentId ? { ...s, assigned_variant: newVariant } : s
-            ));
-
-            const { error } = await supabase
-                .from('ab_test_assignments')
-                .update({ assigned_variant: newVariant })
-                .eq('id', assignmentId);
-
+            setSprint4Sessions(prev => prev.map(s => s.id === assignmentId ? { ...s, assigned_variant: newVariant } : s));
+            const { error } = await supabase.from('ab_test_assignments').update({ assigned_variant: newVariant }).eq('id', assignmentId);
             if (error) throw error;
-
-            // If it's the current user's session/assignment, update the store
-            // We check against the store's userId if available, or just if it matches the current device
-            // For now, we'll just alert if it was successful. 
-            // In a real app, we'd check if (userId === currentUser.id) setVariant(newVariant);
-            
         } catch (error) {
-            console.error('Error updating variant:', error);
-            Alert.alert('Error', 'Failed to update variant');
-            fetchSessions(); // Revert on error
+            console.error(error);
+            fetchSessions();
         }
     };
 
@@ -75,32 +71,61 @@ export function SessionManager() {
             {isLoading ? (
                 <ActivityIndicator size="large" color={COLORS.primary} />
             ) : (
-                <FlatList
-                    data={sessions}
-                    keyExtractor={item => item.id}
-                    renderItem={({ item }) => (
-                        <View style={styles.sessionCard}>
-                            <View>
-                                <Text style={styles.userId}>User: {item.user_id.substring(0, 8)}...</Text>
-                                <Text style={styles.sessionInfo}>
-                                    Assigned: {new Date(item.assigned_at).toLocaleDateString()}
-                                </Text>
-                            </View>
+                <ScrollView style={{ flex: 1 }}>
+                    {/* Sprint 5 Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Sprint 5: Profile Creation (Manual vs Spotify)</Text>
+                        {sprint5Sessions.length === 0 ? (
+                            <Text style={styles.emptyText}>No Sprint 5 sessions found.</Text>
+                        ) : (
+                            sprint5Sessions.map(item => (
+                                <View key={item.id} style={styles.sessionCard}>
+                                    <View>
+                                        <Text style={styles.userId}>{item.display_name || 'User'}</Text>
+                                        <Text style={styles.sessionInfo}>ID: {item.id.substring(0, 8)}...</Text>
+                                    </View>
+                                    <View style={[
+                                        styles.variantBadge,
+                                        { backgroundColor: item.sprint_5_variant === 'variant_b' ? '#1DB954' : COLORS.text.secondary }
+                                    ]}>
+                                        <Text style={styles.variantText}>
+                                            {item.sprint_5_variant === 'variant_b' ? 'Spotify (B)' : 'Manual (A)'}
+                                        </Text>
+                                    </View>
+                                </View>
+                            ))
+                        )}
+                    </View>
 
-                            <TouchableOpacity
-                                style={[
-                                    styles.variantBadge,
-                                    { backgroundColor: item.assigned_variant === 'A' ? COLORS.primary : COLORS.secondary }
-                                ]}
-                                onPress={() => toggleVariant(item.id, item.assigned_variant, item.user_id)}
-                            >
-                                <Text style={styles.variantText}>Variant {item.assigned_variant}</Text>
-                                <MaterialIcons name="swap-horiz" size={16} color="white" />
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                    ListEmptyComponent={<Text style={styles.emptyText}>No active assignments found.</Text>}
-                />
+                    {/* Sprint 4 Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Sprint 4: Review System (Text vs Badge)</Text>
+                        {sprint4Sessions.length === 0 ? (
+                            <Text style={styles.emptyText}>No Sprint 4 sessions found.</Text>
+                        ) : (
+                            sprint4Sessions.map(item => (
+                                <View key={item.id} style={styles.sessionCard}>
+                                    <View>
+                                        <Text style={styles.userId}>User: {item.user_id.substring(0, 8)}...</Text>
+                                        <Text style={styles.sessionInfo}>
+                                            {new Date(item.assigned_at).toLocaleDateString()}
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.variantBadge,
+                                            { backgroundColor: item.assigned_variant === 'A' ? COLORS.primary : COLORS.secondary }
+                                        ]}
+                                        onPress={() => toggleVariantS4(item.id, item.assigned_variant)}
+                                    >
+                                        <Text style={styles.variantText}>Variant {item.assigned_variant}</Text>
+                                        <MaterialIcons name="swap-horiz" size={16} color="white" />
+                                    </TouchableOpacity>
+                                </View>
+                            ))
+                        )}
+                    </View>
+                </ScrollView>
             )}
 
             <View style={styles.debugSection}>
@@ -140,6 +165,15 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         color: COLORS.text.primary,
+    },
+    section: {
+        marginBottom: SPACING.xl,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: COLORS.text.primary,
+        marginBottom: SPACING.sm,
     },
     sessionCard: {
         flexDirection: 'row',

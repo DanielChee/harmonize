@@ -10,6 +10,7 @@ import type { TestProfile } from '@types';
 import { responsiveSizes } from '@utils/responsive';
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useResolvedSpotifyImage } from '../../hooks/useResolvedSpotifyImage';
 
 import type { BudgetPreference, SeatingPreference, TransportPreference } from '@components/profile/ConcertPreferencesGrid';
 
@@ -93,9 +94,68 @@ const ConcertHistoryItem: React.FC<{ concert: typeof MOCK_CONCERT_HISTORY[0] }> 
   );
 };
 
-// Helper to validate URLs
-const isValidUrl = (url: string | undefined | null): boolean => {
-  return !!url && typeof url === 'string' && url.trim().length > 0 && (url.startsWith('http') || url.startsWith('file://'));
+// Helper to validate and clean URLs
+const sanitizeUrl = (url: string | undefined | null): string | null => {
+  if (!url || typeof url !== 'string') return null;
+  let cleaned = url.trim();
+  // Remove surrounding quotes if present (fixes double-serialization issue)
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1);
+  }
+  if (cleaned.length > 0 && (cleaned.startsWith('http') || cleaned.startsWith('file://'))) {
+    return cleaned;
+  }
+  return null;
+};
+
+/**
+ * Sub-component for Artist Item to handle image resolution
+ */
+const SpotifyArtistItem = ({ artist }: { artist: { id: string, name: string, image_url?: string } }) => {
+  const { imageUrl } = useResolvedSpotifyImage(artist.name, artist.image_url, 'artist');
+  
+  return (
+    <View style={styles.artistItem}>
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.artistImage} />
+      ) : (
+        <View style={styles.artistPlaceholder}>
+          <MaterialIcons name="person" size={24} color={COLORS.text.secondary} />
+        </View>
+      )}
+      <Text style={styles.artistName} numberOfLines={2}>{artist.name}</Text>
+    </View>
+  );
+};
+
+/**
+ * Sub-component for Track Item to handle image resolution
+ */
+const SpotifyTrackItem = ({ track, index }: { track: any, index: number }) => {
+  const { imageUrl } = useResolvedSpotifyImage(track.name, track.image_url, 'track');
+
+  return (
+    <View style={styles.trackItem}>
+      <Text style={styles.trackNumber}>{index + 1}</Text>
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.trackImage} />
+      ) : (
+        <View style={styles.songPlaceholder}>
+          <MaterialIcons name="music-note" size={20} color={COLORS.text.secondary} />
+        </View>
+      )}
+      <View style={styles.trackInfo}>
+        <Text style={styles.trackName} numberOfLines={1}>{track.name}</Text>
+        <Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
+      </View>
+      <View style={styles.trackDuration}>
+        <Text style={styles.trackDurationText}>
+          {Math.floor(track.duration_ms / 60000)}:
+          {String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}
+        </Text>
+      </View>
+    </View>
+  );
 };
 
 export function ProfileCardB({
@@ -128,8 +188,8 @@ export function ProfileCardB({
     : (topArtists || []).map((name, index) => ({
         id: String(index + 1),
         name,
-        image_url: (profile.artist_images && isValidUrl(profile.artist_images[index])) 
-          ? profile.artist_images[index] 
+        image_url: (profile.artist_images && sanitizeUrl(profile.artist_images[index])) 
+          ? sanitizeUrl(profile.artist_images[index])!
           : undefined // No placeholder for real users if missing
       }));
 
@@ -154,23 +214,28 @@ export function ProfileCardB({
           id: String(index + 1),
           name: name || songString,
           artist,
-          image_url: (profile.song_images && isValidUrl(profile.song_images[index]))
-            ? profile.song_images[index]
-            : undefined, // No placeholder for real users
+          image_url: (profile.song_images && sanitizeUrl(profile.song_images[index]))
+            ? sanitizeUrl(profile.song_images[index])!
+            : 'https://via.placeholder.com/300', // Fallback to placeholder
           duration_ms: 0, 
         };
       });
 
   const featuredTrack = isTestProfile 
     ? (spotifyTracks[0] || MOCK_SPOTIFY_DATA.featured_track)
-    : (spotifyTracks[0] || null); // Real users might not have a track
+    : (spotifyTracks[0] ? { ...spotifyTracks[0], image_url: spotifyTracks[0].image_url || 'https://via.placeholder.com/300' } : null); // Real users might not have a track
 
   const concertsCount = concertsAttended !== undefined ? concertsAttended : profile.concertsAttended;
   const isUniversityVerified = profile.universityVerified && profile.university && profile.university !== 'Not specified';
 
   // Resolve profile image - prioritize prop, then profile.image, then placeholder
-  const resolvedProfileImage = isValidUrl(profilePictureUrl) ? profilePictureUrl : 
-                               isValidUrl(profile.image) ? profile.image : null;
+  const resolvedProfileImage = sanitizeUrl(profilePictureUrl) || sanitizeUrl(profile.image);
+
+  // VERIFICATION LOG: ProfileCardB Images
+  console.log(`[ProfileCardB] Rendering profile: ${profile.name}`);
+  console.log(`[ProfileCardB] Resolved Profile Image: ${resolvedProfileImage}`);
+  spotifyArtists.forEach((a, i) => console.log(`[ProfileCardB] Artist ${i+1}: ${a.name} -> ${a.image_url}`));
+  spotifyTracks.forEach((t, i) => console.log(`[ProfileCardB] Track ${i+1}: ${t.name} -> ${t.image_url}`));
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -276,10 +341,7 @@ export function ProfileCardB({
           <Text style={styles.sectionTitle}>Top Artists</Text>
           <View style={styles.artistsList}>
             {spotifyArtists.map((artist) => (
-              <View key={artist.id} style={styles.artistItem}>
-                <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
-                <Text style={styles.artistName} numberOfLines={2}>{artist.name}</Text>
-              </View>
+              <SpotifyArtistItem key={artist.id} artist={artist} />
             ))}
           </View>
         </Card>
@@ -290,26 +352,13 @@ export function ProfileCardB({
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Top Tracks</Text>
           {spotifyTracks.map((track, index) => (
-            <View key={track.id} style={styles.trackItem}>
-              <Text style={styles.trackNumber}>{index + 1}</Text>
-              <Image source={{ uri: track.image_url }} style={styles.trackImage} />
-              <View style={styles.trackInfo}>
-                <Text style={styles.trackName} numberOfLines={1}>{track.name}</Text>
-                <Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
-              </View>
-              <View style={styles.trackDuration}>
-                <Text style={styles.trackDurationText}>
-                  {Math.floor(track.duration_ms / 60000)}:
-                  {String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}
-                </Text>
-              </View>
-            </View>
+            <SpotifyTrackItem key={track.id} track={track} index={index} />
           ))}
         </Card>
       )}
 
       {/* Concert History - Only show for test profiles or if we have real data (future) */}
-      {profile.id.startsWith('test-') && (
+      {isTestProfile && (
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Concert History</Text>
           <Text style={styles.subsectionTitle}>Recently Attended Shows</Text>
@@ -666,6 +715,18 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
     textAlign: 'center',
   },
+  artistPlaceholder: {
+    width: '100%',
+    aspectRatio: 1,
+    maxWidth: responsiveSizes.artistImage.large,
+    borderRadius: responsiveSizes.artistImage.large / 2,
+    marginBottom: SPACING.xs,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   // Top Tracks
   trackItem: {
     flexDirection: 'row',
@@ -683,6 +744,16 @@ const styles = StyleSheet.create({
     width: responsiveSizes.artistImage.tiny,
     height: responsiveSizes.artistImage.tiny,
     borderRadius: BORDER_RADIUS.sm,
+  },
+  songPlaceholder: {
+    width: responsiveSizes.artistImage.tiny,
+    height: responsiveSizes.artistImage.tiny,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   trackInfo: {
     flex: 1,

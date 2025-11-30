@@ -10,6 +10,7 @@ import type { TestProfile } from '@types';
 import { responsiveSizes } from '@utils/responsive';
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useResolvedSpotifyImage } from '../../hooks/useResolvedSpotifyImage';
 
 interface ProfileCardAProps {
   profile: TestProfile;
@@ -82,14 +83,123 @@ const ConcertHistoryItem: React.FC<{ concert: typeof MOCK_CONCERT_HISTORY[0] }> 
   );
 };
 
+// Helper to validate and clean URLs
+const sanitizeUrl = (url: string | undefined | null): string | null => {
+  if (!url || typeof url !== 'string') return null;
+  let cleaned = url.trim();
+  // Remove surrounding quotes if present (fixes double-serialization issue)
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1);
+  }
+  if (cleaned.length > 0 && (cleaned.startsWith('http') || cleaned.startsWith('file://'))) {
+    return cleaned;
+  }
+  return null;
+};
+
+/**
+ * Sub-component for Artist Item to handle image resolution
+ */
+const SpotifyArtistItem = ({ artist }: { artist: { id: string, name: string, image_url?: string | null } }) => {
+  const { imageUrl } = useResolvedSpotifyImage(artist.name, artist.image_url, 'artist');
+  
+  return (
+    <View style={styles.artistItem}>
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.artistImage} />
+      ) : (
+        <View style={styles.artistPlaceholder}>
+          <MaterialIcons name="person" size={24} color={COLORS.text.secondary} />
+        </View>
+      )}
+      <Text style={styles.artistName} numberOfLines={2}>{artist.name}</Text>
+    </View>
+  );
+};
+
+/**
+ * Sub-component for Track Item to handle image resolution
+ */
+const SpotifyTrackItem = ({ track, index }: { track: any, index: number }) => {
+  const { imageUrl } = useResolvedSpotifyImage(track.name, track.image_url, 'track');
+
+  return (
+    <View style={styles.trackItem}>
+      <Text style={styles.trackNumber}>{index + 1}</Text>
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.trackImage} />
+      ) : (
+        <View style={styles.songPlaceholder}>
+          <MaterialIcons name="music-note" size={20} color={COLORS.text.secondary} />
+        </View>
+      )}
+      <View style={styles.trackInfo}>
+        <Text style={styles.trackName} numberOfLines={1}>{track.name}</Text>
+        <Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
+      </View>
+      <View style={styles.trackDuration}>
+        <Text style={styles.trackDurationText}>
+          {Math.floor(track.duration_ms / 60000)}:
+          {String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}
+        </Text>
+      </View>
+    </View>
+  );
+};
+
 export function ProfileCardA({ profile }: ProfileCardAProps) {
+  const isTestProfile = profile.id.startsWith('test-');
+
+  // Use real data for real users, fallback to MOCK only for test profiles
+  const spotifyGenres = isTestProfile 
+    ? MOCK_SPOTIFY_DATA.top_genres
+    : (profile.top_genres || []);
+  
+  const spotifyArtists = isTestProfile
+    ? MOCK_SPOTIFY_DATA.top_artists
+    : (profile.top_artists || []).map((name, index) => ({
+        id: String(index + 1),
+        name,
+        image_url: (profile.artist_images && sanitizeUrl(profile.artist_images[index])) 
+          ? sanitizeUrl(profile.artist_images[index])
+          : undefined 
+      }));
+
+  const spotifyTracks = isTestProfile
+    ? MOCK_SPOTIFY_DATA.top_tracks
+    : (profile.top_songs || []).map((songString, index) => {
+        const [name, ...artistParts] = songString.split(' - ');
+        const artist = artistParts.join(' - ') || 'Unknown Artist';
+        return {
+          id: String(index + 1),
+          name: name || songString,
+          artist,
+          image_url: (profile.song_images && sanitizeUrl(profile.song_images[index]))
+            ? sanitizeUrl(profile.song_images[index])
+            : undefined,
+          duration_ms: 0, 
+        };
+      });
+
+  const featuredTrack = isTestProfile 
+    ? MOCK_SPOTIFY_DATA.featured_track
+    : (spotifyTracks[0] ? { ...spotifyTracks[0], image_url: spotifyTracks[0].image_url || 'https://via.placeholder.com/300' } : null);
+
+  const resolvedProfileImage = sanitizeUrl(profile.image);
+
+  // VERIFICATION LOG: ProfileCardA Images
+  console.log(`[ProfileCardA] Rendering profile: ${profile.name}`);
+  console.log(`[ProfileCardA] Resolved Profile Image: ${resolvedProfileImage}`);
+  spotifyArtists.forEach((a, i) => console.log(`[ProfileCardA] Artist ${i+1}: ${a.name} -> ${a.image_url}`));
+  spotifyTracks.forEach((t, i) => console.log(`[ProfileCardA] Track ${i+1}: ${t.name} -> ${t.image_url}`));
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header with Mutual Friends */}
       <View style={styles.header}>
         <View style={styles.avatar}>
-          {profile.image ? (
-            <Image source={{ uri: profile.image }} style={{ width: '100%', height: '100%', borderRadius: 999 }} />
+          {resolvedProfileImage ? (
+            <Image source={{ uri: resolvedProfileImage }} style={{ width: '100%', height: '100%', borderRadius: 999 }} />
           ) : (
             <Text style={styles.avatarText}>{profile.name[0]}</Text>
           )}
@@ -158,69 +268,63 @@ export function ProfileCardA({ profile }: ProfileCardAProps) {
       </Card>
 
       {/* Featured Song */}
-      <Card style={styles.section}>
-        <FeaturedSong track={MOCK_SPOTIFY_DATA.featured_track} />
-      </Card>
+      {featuredTrack && (
+        <Card style={styles.section}>
+          <FeaturedSong track={featuredTrack} />
+        </Card>
+      )}
 
       {/* Music Stats */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>My Music Stats</Text>
-        <View style={styles.genresSection}>
-          <Text style={styles.subsectionTitle}>Top Genres</Text>
-          <View style={styles.genresList}>
-            {MOCK_SPOTIFY_DATA.top_genres.map((genre, index) => (
-              <View key={`${genre}-${index}`} style={styles.genreBorderedTag}>
-                <Text style={styles.genreTagText}>{genre}</Text>
-              </View>
-            ))}
+      {spotifyGenres.length > 0 && (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>My Music Stats</Text>
+          <View style={styles.genresSection}>
+            <Text style={styles.subsectionTitle}>Top Genres</Text>
+            <View style={styles.genresList}>
+              {spotifyGenres.map((genre, index) => (
+                <View key={`${genre}-${index}`} style={styles.genreBorderedTag}>
+                  <Text style={styles.genreTagText}>{genre}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
-      </Card>
+        </Card>
+      )}
 
       {/* Top Artists */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Top Artists</Text>
-        <View style={styles.artistsList}>
-          {MOCK_SPOTIFY_DATA.top_artists.map((artist) => (
-            <View key={artist.id} style={styles.artistItem}>
-              <Image source={{ uri: artist.image_url }} style={styles.artistImage} />
-              <Text style={styles.artistName} numberOfLines={2}>{artist.name}</Text>
-            </View>
-          ))}
-        </View>
-      </Card>
+      {spotifyArtists.length > 0 && (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Top Artists</Text>
+          <View style={styles.artistsList}>
+            {spotifyArtists.map((artist) => (
+              <SpotifyArtistItem key={artist.id} artist={artist} />
+            ))}
+          </View>
+        </Card>
+      )}
 
       {/* Top Tracks */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Top Tracks</Text>
-        {MOCK_SPOTIFY_DATA.top_tracks.map((track, index) => (
-          <View key={track.id} style={styles.trackItem}>
-            <Text style={styles.trackNumber}>{index + 1}</Text>
-            <Image source={{ uri: track.image_url }} style={styles.trackImage} />
-            <View style={styles.trackInfo}>
-              <Text style={styles.trackName} numberOfLines={1}>{track.name}</Text>
-              <Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
-            </View>
-            <View style={styles.trackDuration}>
-              <Text style={styles.trackDurationText}>
-                {Math.floor(track.duration_ms / 60000)}:
-                {String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0')}
-              </Text>
-            </View>
-          </View>
-        ))}
-      </Card>
-
-      {/* Concert History */}
-      <Card style={styles.section}>
-        <Text style={styles.sectionTitle}>Concert History</Text>
-        <Text style={styles.subsectionTitle}>Recently Attended Shows</Text>
-        <View style={styles.concertHistoryGrid}>
-          {MOCK_CONCERT_HISTORY.map((concert) => (
-            <ConcertHistoryItem key={concert.id} concert={concert} />
+      {spotifyTracks.length > 0 && (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Top Tracks</Text>
+          {spotifyTracks.map((track, index) => (
+            <SpotifyTrackItem key={track.id} track={track} index={index} />
           ))}
-        </View>
-      </Card>
+        </Card>
+      )}
+
+      {/* Concert History - Test Profiles Only */}
+      {isTestProfile && (
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Concert History</Text>
+          <Text style={styles.subsectionTitle}>Recently Attended Shows</Text>
+          <View style={styles.concertHistoryGrid}>
+            {MOCK_CONCERT_HISTORY.map((concert) => (
+              <ConcertHistoryItem key={concert.id} concert={concert} />
+            ))}
+          </View>
+        </Card>
+      )}
 
       {/* Credentials */}
       <Card style={styles.section}>
@@ -260,7 +364,6 @@ export function ProfileCardA({ profile }: ProfileCardAProps) {
           </View>
         </View>
 
-        {/* CHECK FIXED HERE */}
         {(!profile.reviewsTypeA ||
           !Array.isArray(profile.reviewsTypeA) ||
           profile.reviewsTypeA.length === 0) ? (
@@ -523,6 +626,18 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
     textAlign: 'center',
   },
+  artistPlaceholder: {
+    width: '100%',
+    aspectRatio: 1,
+    maxWidth: responsiveSizes.artistImage.large,
+    borderRadius: responsiveSizes.artistImage.large / 2,
+    marginBottom: SPACING.xs,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   // Top Tracks
   trackItem: {
     flexDirection: 'row',
@@ -540,6 +655,16 @@ const styles = StyleSheet.create({
     width: responsiveSizes.artistImage.tiny,
     height: responsiveSizes.artistImage.tiny,
     borderRadius: BORDER_RADIUS.sm,
+  },
+  songPlaceholder: {
+    width: responsiveSizes.artistImage.tiny,
+    height: responsiveSizes.artistImage.tiny,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   trackInfo: {
     flex: 1,

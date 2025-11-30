@@ -10,6 +10,77 @@ import { SpotifyButton } from "@components/SpotifyButton";
 import type { SpotifyData } from "@types";
 import { supabase } from "@services/supabase/supabase";
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, IS_DEV } from "@constants";
+import { useResolvedSpotifyImage } from '../../hooks/useResolvedSpotifyImage';
+
+// Helper to validate and clean URLs (Shared with ProfileCardA/B)
+const sanitizeUrl = (url: string | undefined | null): string | null => {
+  if (!url || typeof url !== 'string') return null;
+  let cleaned = url.trim();
+  // Remove surrounding quotes if present (fixes double-serialization issue)
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1);
+  }
+  if (cleaned.length > 0 && (cleaned.startsWith('http') || cleaned.startsWith('file://'))) {
+    return cleaned;
+  }
+  return null;
+};
+
+/**
+ * Sub-component for Artist Item in ProfileScreen
+ */
+const ProfileArtistItem = ({ artist }: { artist: { id: string, name: string, image_url?: string | null } }) => {
+  const { imageUrl } = useResolvedSpotifyImage(artist.name, artist.image_url, 'artist');
+  
+  return (
+    <View style={styles.artistItem}>
+      {imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.artistImage}
+          onError={() => console.warn('Profile: Failed to load artist image:', artist.name)}
+        />
+      ) : (
+        <View style={styles.artistPlaceholder}>
+          <MaterialIcons name="person" size={24} color={COLORS.text.secondary} />
+        </View>
+      )}
+      <Text style={styles.artistName} numberOfLines={2}>{artist.name}</Text>
+    </View>
+  );
+};
+
+/**
+ * Sub-component for Song Item in ProfileScreen
+ */
+const ProfileSongItem = ({ song, index }: { song: { id: string, name: string, artist: string, image_url?: string | null }, index: number }) => {
+  const { imageUrl } = useResolvedSpotifyImage(song.name, song.image_url, 'track');
+
+  return (
+    <View style={styles.songItem}>
+      <Text style={styles.songNumber}>{index + 1}</Text>
+      {imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.songImage}
+          onError={() => console.warn('Profile: Failed to load song image:', song.name)}
+        />
+      ) : (
+        <View style={styles.songPlaceholder}>
+          <MaterialIcons name="music-note" size={20} color={COLORS.text.secondary} />
+        </View>
+      )}
+      <View style={styles.songInfo}>
+        <Text style={styles.songName} numberOfLines={1}>
+          {song.name}
+        </Text>
+        <Text style={styles.songArtist} numberOfLines={1}>
+          {song.artist}
+        </Text>
+      </View>
+    </View>
+  );
+};
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -78,18 +149,21 @@ export default function ProfileScreen() {
       ? currentUser.top_genres
       : [];
 
-  // Keep full SpotifyArtist objects if using Spotify data, otherwise use string names
+  // Keep full SpotifyArtist objects if using Spotify data, otherwise use string names and stored images
   const topArtists = useSpotifyData && displaySpotifyData?.top_artists && displaySpotifyData.top_artists.length > 0
     ? displaySpotifyData.top_artists
     : (currentUser.top_artists && Array.isArray(currentUser.top_artists) && currentUser.top_artists.length > 0)
-      ? currentUser.top_artists.map(name => ({
+      ? currentUser.top_artists.map((name, index) => ({
           id: name,
           name,
-          image_url: undefined
+          // Retrieve image from stored array by index, sanitize, or undefined to trigger placeholder
+          image_url: (currentUser.artist_images && currentUser.artist_images[index])
+            ? sanitizeUrl(currentUser.artist_images[index]) || undefined
+            : undefined
         }))
       : [];
 
-  // Keep full SpotifyTrack objects if using Spotify data, otherwise parse song strings
+  // Keep full SpotifyTrack objects if using Spotify data, otherwise parse song strings and stored images
   const topSongs = useSpotifyData && displaySpotifyData?.top_tracks && displaySpotifyData.top_tracks.length > 0
     ? displaySpotifyData.top_tracks
     : (currentUser.top_songs && Array.isArray(currentUser.top_songs) && currentUser.top_songs.length > 0)
@@ -97,17 +171,26 @@ export default function ProfileScreen() {
         const [name, ...artistParts] = songStr.split(' - ');
         const artist = artistParts.join(' - ') || 'Unknown Artist';
 
+        // Retrieve image from stored array by index, sanitize, or undefined to trigger placeholder
+        const imageUrl = (currentUser.song_images && currentUser.song_images[idx])
+          ? sanitizeUrl(currentUser.song_images[idx]) || undefined
+          : undefined;
+
         return {
           id: `song-${idx}`,
           name,
           artist,
-          image_url: undefined,
+          image_url: imageUrl,
           duration_ms: 0,
           preview_url: '',
         };
       })
       : [];
 
+
+  const resolvedProfileImage = sanitizeUrl(currentUser.profile_picture_url) || 'https://i.pravatar.cc/300?img=1';
+  console.log(`[ProfileScreen] Rendering profile for user: ${currentUser.display_name}`);
+  console.log(`[ProfileScreen] Resolved Profile Image: ${resolvedProfileImage}`);
 
   return (
     <View style={styles.container}>
@@ -122,7 +205,7 @@ export default function ProfileScreen() {
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <Image
-            source={{ uri: currentUser.profile_picture_url || 'https://i.pravatar.cc/300?img=1' }}
+            source={{ uri: resolvedProfileImage }}
             style={styles.avatar}
           />
           <View style={styles.headerInfo}>
@@ -231,24 +314,7 @@ export default function ProfileScreen() {
                 <Text style={styles.subsectionTitle}>Top Artists</Text>
                 <View style={styles.artistsList}>
                   {topArtists.slice(0, 5).map((artist, index) => (
-                    <View key={artist.id || index} style={styles.artistItem}>
-                      {artist.image_url ? (
-                        <Image
-                          source={{ uri: artist.image_url }}
-                          style={styles.artistImage}
-                          onError={() => {
-                            console.warn('Profile: Failed to load artist image:', artist.name);
-                          }}
-                        />
-                      ) : (
-                        <View style={styles.artistPlaceholder}>
-                          <MaterialIcons name="person" size={24} color={COLORS.text.secondary} />
-                        </View>
-                      )}
-                      <Text style={styles.artistName} numberOfLines={2}>
-                        {artist.name}
-                      </Text>
-                    </View>
+                    <ProfileArtistItem key={artist.id || index} artist={artist} />
                   ))}
                 </View>
               </View>
@@ -260,30 +326,7 @@ export default function ProfileScreen() {
                 <Text style={styles.subsectionTitle}>Top Songs</Text>
                 <View style={styles.songsList}>
                   {topSongs.slice(0, 5).map((song, index) => (
-                    <View key={song.id || index} style={styles.songItem}>
-                      <Text style={styles.songNumber}>{index + 1}</Text>
-                      {song.image_url ? (
-                        <Image
-                          source={{ uri: song.image_url }}
-                          style={styles.songImage}
-                          onError={() => {
-                            console.warn('Profile: Failed to load song image:', song.name);
-                          }}
-                        />
-                      ) : (
-                        <View style={styles.songPlaceholder}>
-                          <MaterialIcons name="music-note" size={20} color={COLORS.text.secondary} />
-                        </View>
-                      )}
-                      <View style={styles.songInfo}>
-                        <Text style={styles.songName} numberOfLines={1}>
-                          {song.name}
-                        </Text>
-                        <Text style={styles.songArtist} numberOfLines={1}>
-                          {song.artist}
-                        </Text>
-                      </View>
-                    </View>
+                    <ProfileSongItem key={song.id || index} song={song} index={index} />
                   ))}
                 </View>
               </View>
@@ -516,6 +559,16 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     marginRight: SPACING.md,
+  },
+  avatarText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: COLORS.text.primary,
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   headerInfo: {
     flex: 1,

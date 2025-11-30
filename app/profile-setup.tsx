@@ -135,14 +135,14 @@ export default function ProfileSetupScreen() {
   }, [loadUserProfile]);
 
   // Start timing on first field interaction
-  const startTimingIfNeeded = () => {
+  const startTimingIfNeeded = useCallback(() => {
     if (profileCreationStartTime.current === null) {
       profileCreationStartTime.current = Date.now();
       console.log('[ProfileSetup] Timing started - profile creation timer began');
     }
-  };
+  }, []);
 
-  const updateFormData = (updates: Partial<typeof formData>) => {
+  const updateFormData = useCallback((updates: Partial<typeof formData>) => {
     // Start timing on first field interaction
     startTimingIfNeeded();
 
@@ -156,7 +156,7 @@ export default function ProfileSetupScreen() {
     }
 
     setFormData(prev => ({ ...prev, ...updates }));
-  };
+  }, [startTimingIfNeeded]);
 
   const canProceedToNextStep = (): boolean => {
     switch (currentStep) {
