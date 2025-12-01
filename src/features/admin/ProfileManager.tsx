@@ -320,7 +320,7 @@ export function ProfileManager() {
                             </View>
                         )}
                     </View>
-                    <Text style={styles.email}>{item.email}</Text>
+                    {/* Email hidden for privacy/demo */}
                     <Text style={styles.id}>ID: {item.id.substring(0, 8)}...</Text>
                 </View>
                 <View style={styles.actions}>

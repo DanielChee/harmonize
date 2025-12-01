@@ -67,29 +67,22 @@ export default function MatchScreen() {
       // Fetch real profiles
       try {
         const { getPotentialMatches } = await import('@services/supabase/user');
+        
+        // 1. Real Users (profiles table)
         const realUsers = await getPotentialMatches(currentUser.id);
         
-        console.log('[MatchScreen] Real users found:', realUsers.length);
-        if (realUsers.length > 0) {
-          console.log('[MatchScreen] First real user top_artists:', JSON.stringify(realUsers[0].top_artists));
-          console.log('[MatchScreen] First real user artist_images:', JSON.stringify(realUsers[0].artist_images));
-        }
-
-        if (realUsers.length > 0) {
-          // Map real users to TestProfile format
-          const mappedProfiles: TestProfile[] = realUsers.map(user => ({
+        const mappedRealUsers: TestProfile[] = realUsers.map(user => ({
             id: user.id,
             name: user.display_name || user.username || 'Unknown',
             age: user.age || 21,
             bio: user.bio || 'No bio yet.',
             image: user.profile_picture_url || 'https://via.placeholder.com/400',
-            profileType: 'neutral', // Default for real users
+            profileType: 'neutral',
             top_artists: user.top_artists || [],
             top_genres: user.top_genres || [],
             top_songs: user.top_songs || [],
             artist_images: user.artist_images || [],
             song_images: user.song_images || [],
-            // Default values for required TestProfile fields
             pronouns: user.pronouns || 'they/them',
             university: user.university || 'Unknown University',
             universityVerified: !!user.is_verified,
@@ -105,16 +98,14 @@ export default function MatchScreen() {
               harmonies: { count: 0, total: 0 }
             },
             totalReviews: 0
-          }));
+        }));
 
-          // Combine with mock profiles (shuffle or prepend)
-          // For now, prepend real profiles so they show up first
-          if (!cancelled) {
-            setDisplayProfiles([...mappedProfiles, ...TEST_PROFILES]);
-          }
+        if (!cancelled) {
+          // Prioritize Real Users, then Static Test Profiles
+          setDisplayProfiles([...mappedRealUsers, ...TEST_PROFILES]);
         }
       } catch (error) {
-        console.error('Error fetching real profiles:', error);
+        console.error('Error fetching profiles:', error);
       }
 
       await initialize(currentUser.id);

@@ -1,5 +1,6 @@
-import { API_ENDPOINTS } from '@constants';
-import * as SecureStore from 'expo-secure-store';
+import { API_ENDPOINTS } from '../../constants';
+import * as SecureStore from '../../lib/__mocks__/secureStore'; // Use mock store for scripts
+import 'cross-fetch/polyfill'; // Ensure fetch is available
 
 const CLIENT_ID = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID;
 // WARNING: In a production app, the Client Secret should NEVER be stored on the client.
@@ -121,6 +122,82 @@ export const searchSpotifyTracksPublic = async (query: string, limit = 5) => {
     return items;
   } catch (error) {
     console.error('Public Track Search Error:', error);
+    return [];
+  }
+};
+
+/**
+ * Public Fetch Playlist Tracks
+ * Used for analyzing user playlists for A/B test profiles
+ */
+export const getPlaylistTracksPublic = async (playlistId: string, limit = 50) => {
+  const token = await getAppToken();
+  if (!token) return [];
+
+  try {
+    // Handle full URLs if passed
+    const cleanId = playlistId.split('/').pop()?.split('?')[0] || playlistId;
+
+    const response = await fetch(
+      `${API_ENDPOINTS.spotify.base}/playlists/${cleanId}/tracks?limit=${limit}&market=US`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    const data = await response.json();
+
+    if (data.error) {
+      console.error('[Spotify] Playlist Fetch Error:', data.error);
+      return [];
+    }
+
+    // VERIFICATION LOG
+    console.log(`[Spotify Verify Public] Playlist ${cleanId} fetched. Found ${data.items?.length} tracks.`);
+    
+    // Map to a cleaner format
+    return data.items
+      .filter((item: any) => item && item.track && item.track.name && item.track.artists && item.track.artists.length > 0)
+      .map((item: any) => ({
+        name: item.track.name,
+        artist: item.track.artists[0].name,
+        popularity: item.track.popularity,
+        image_url: item.track.album?.images?.[0]?.url,
+        preview_url: item.track.preview_url,
+        uri: item.track.uri
+      }));
+
+  } catch (error) {
+    console.error('Public Playlist Fetch Error:', error);
+    return [];
+  }
+};
+
+/**
+ * Public Fetch User Playlists
+ * Used to find public playlists for a given Spotify User ID
+ */
+export const getUserPlaylistsPublic = async (userId: string, limit = 10) => {
+  const token = await getAppToken();
+  if (!token) return [];
+
+  try {
+    const response = await fetch(
+      `${API_ENDPOINTS.spotify.base}/users/${userId}/playlists?limit=${limit}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    const data = await response.json();
+
+    if (data.error) {
+      console.error('[Spotify] User Playlists Fetch Error:', data.error);
+      return [];
+    }
+
+    console.log(`[Spotify Verify Public] User ${userId} fetched. Found ${data.items?.length} playlists.`);
+    return data.items || [];
+  } catch (error) {
+    console.error('Public User Playlists Fetch Error:', error);
     return [];
   }
 };

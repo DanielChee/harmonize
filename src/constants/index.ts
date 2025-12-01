@@ -8,7 +8,8 @@ export const APP_CONFIG = {
 } as const;
 
 // Environment
-export const IS_DEV = __DEV__;
+// Environment check for Node vs React Native
+export const IS_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production';
 
 // API Endpoints
 export const API_ENDPOINTS = {
