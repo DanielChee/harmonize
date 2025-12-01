@@ -284,8 +284,8 @@ export class VerificationSuite {
                 console.warn('Top artists exist but artist_images is empty/null. This might be expected for manual entry.');
             } else if (artistImages.length > 0) {
                 const firstImage = artistImages[0];
-                if (!firstImage.url || !firstImage.name) {
-                    throw new Error('artist_images has invalid structure. Expected {name, url}.');
+                if (typeof firstImage !== 'string') {
+                    throw new Error('artist_images has invalid structure. Expected string URL.');
                 }
                 console.log('Verified artist_images persistence:', firstImage);
                 return; // Success

@@ -245,6 +245,13 @@ export default function ProfileScreen() {
               </View>
             )}
 
+            {currentUser.phone && (
+              <View style={styles.infoCard}>
+                <MaterialIcons name="phone" size={20} color={COLORS.primary} />
+                <Text style={styles.infoText}>{currentUser.phone}</Text>
+              </View>
+            )}
+
             {currentUser.university && (
               <View style={styles.infoCard}>
                 <MaterialIcons name="school" size={20} color={COLORS.primary} />

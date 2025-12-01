@@ -15,7 +15,7 @@ interface BasicInfoStepProps {
     display_name: string;
     city: string;
     age: number;
-    phone_number: string;
+    phone: string; // Changed from phone_number
     mbti: string;
     pronouns: string;
     bio: string;
