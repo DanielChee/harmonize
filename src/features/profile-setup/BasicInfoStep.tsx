@@ -15,6 +15,7 @@ interface BasicInfoStepProps {
     display_name: string;
     city: string;
     age: number;
+    phone_number: string;
     mbti: string;
     pronouns: string;
     bio: string;
@@ -92,6 +93,17 @@ export const BasicInfoStep: React.FC<BasicInfoStepProps> = ({ formData, updateFo
         onFocus={onFieldInteraction}
         keyboardType="numeric"
         maxLength={3}
+      />
+
+      {/* Phone Number */}
+      <Input
+        label="Phone Number *"
+        placeholder="Enter your phone number"
+        value={formData.phone_number}
+        onChangeText={(text) => updateFormData({ phone_number: text })}
+        onFocus={onFieldInteraction}
+        keyboardType="phone-pad"
+        maxLength={10}
       />
 
       {/* MBTI */}

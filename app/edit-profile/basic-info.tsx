@@ -1,11 +1,11 @@
+import { Button } from '@components';
+import { COLORS, SPACING } from '@constants';
+import { BasicInfoStep } from '@features/profile-setup/BasicInfoStep';
+import { updateUserProfile } from '@services/supabase/user';
+import { useUserStore } from '@store';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { COLORS, SPACING } from '@constants';
-import { Button } from '@components';
-import { BasicInfoStep } from '@features/profile-setup/BasicInfoStep';
-import { useUserStore } from '@store';
-import { updateUserProfile } from '@services/supabase/user';
 
 export default function EditBasicInfoScreen() {
     const router = useRouter();
@@ -15,6 +15,7 @@ export default function EditBasicInfoScreen() {
         display_name: '',
         city: '',
         age: 0,
+        phone_number: '',
         mbti: '',
         pronouns: '',
         bio: '',
@@ -26,6 +27,7 @@ export default function EditBasicInfoScreen() {
                 display_name: currentUser.display_name || '',
                 city: currentUser.city || '',
                 age: currentUser.age || 0,
+                phone_number: '',
                 mbti: currentUser.mbti || '',
                 pronouns: currentUser.pronouns || '',
                 bio: currentUser.bio || '',

@@ -39,6 +39,7 @@ export default function ProfileSetupScreen() {
     display_name: '',
     city: '',
     age: 0,
+    phone_number: '',
     mbti: '',
     pronouns: '',
     bio: '',
@@ -94,6 +95,7 @@ export default function ProfileSetupScreen() {
           display_name: profile.display_name || '',
           city: profile.city || '',
           age: profile.age || 0,
+          phone_number: '',
           mbti: profile.mbti || '',
           pronouns: profile.pronouns || '',
           bio: profile.bio || '',
@@ -165,6 +167,7 @@ export default function ProfileSetupScreen() {
           formData.display_name.trim() &&
           formData.city.trim() &&
           formData.age > 0 &&
+          formData.phone_number.trim() &&
           formData.pronouns.trim() &&
           formData.bio.trim()
         );
