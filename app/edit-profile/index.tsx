@@ -65,7 +65,7 @@ export default function EditProfileMenuScreen() {
                         <TouchableOpacity
                             key={item.id}
                             style={styles.menuItem}
-                            onPress={() => router.push(item.route)}
+                            onPress={() => router.push(item.route as any)}
                         >
                             <View style={styles.iconContainer}>
                                 <MaterialIcons name={item.icon as any} size={24} color={COLORS.primary} />

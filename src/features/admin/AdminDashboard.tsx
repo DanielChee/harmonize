@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, SPACING } from '@constants';
+import { COLORS, SPACING, IS_DEV } from '@constants';
 import { AnalyticsViewer } from '../testing/AnalyticsViewer';
 import { SessionManager } from './SessionManager';
 import { ProfileManager } from './ProfileManager';
@@ -13,6 +13,14 @@ type Tab = 'metrics' | 'sessions' | 'profiles' | 'system' | 'verifications';
 export function AdminDashboard() {
     const [activeTab, setActiveTab] = useState<Tab>('metrics');
     const insets = useSafeAreaInsets();
+
+    if (!IS_DEV) {
+        return (
+            <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ fontSize: 18, color: COLORS.text.secondary }}>Admin tools are not available in this build.</Text>
+            </View>
+        );
+    }
 
     const renderContent = () => {
         switch (activeTab) {

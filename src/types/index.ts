@@ -19,6 +19,7 @@ export interface User {
   pronouns: string;
   age: number;
   city: string; // City, State (e.g., "Atlanta, GA")
+  phone?: string; // Optional phone number
   university: string;
   academic_year?: string; // e.g., "Senior Undergrad", "Graduate Student", "Alumni"
   academic_field?: string; // e.g., "Computer Science", "Business", etc.

@@ -72,7 +72,7 @@ export const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
       },
       onPanResponderGrant: () => {
         isDragging.current = true;
-        translateY.setOffset(translateY._value);
+        translateY.setOffset((translateY as any)._value);
         initialHeight.current = modalHeight;
       },
       onPanResponderMove: (_, gestureState) => {

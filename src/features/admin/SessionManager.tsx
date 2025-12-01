@@ -4,6 +4,9 @@ import { COLORS, SPACING, BORDER_RADIUS } from '@constants';
 import { useABTestStore } from '@store';
 import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '@services/supabase/supabase';
+import { SecureStoreAdapter } from '../../lib/secureStore';
+
+const STORAGE_KEY = "harmonize_daily_likes";
 
 export function SessionManager() {
     const { variant, setVariant } = useABTestStore();
@@ -14,6 +17,15 @@ export function SessionManager() {
     useEffect(() => {
         fetchSessions();
     }, []);
+
+    const resetLikeLimit = async () => {
+        try {
+            await SecureStoreAdapter.removeItem(STORAGE_KEY);
+            Alert.alert("Success", "Daily like limit reset to 0.");
+        } catch (error) {
+            Alert.alert("Error", "Failed to reset like limit.");
+        }
+    };
 
     const fetchSessions = async () => {
         setIsLoading(true);
@@ -145,6 +157,13 @@ export function SessionManager() {
                         <Text style={styles.debugButtonText}>Force Variant B</Text>
                     </TouchableOpacity>
                 </View>
+
+                <TouchableOpacity
+                    style={[styles.debugButton, { marginTop: SPACING.md, backgroundColor: COLORS.error }]}
+                    onPress={resetLikeLimit}
+                >
+                    <Text style={styles.debugButtonText}>Reset My Daily Like Limit</Text>
+                </TouchableOpacity>
             </View>
         </View>
     );

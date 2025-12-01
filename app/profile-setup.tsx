@@ -95,7 +95,7 @@ export default function ProfileSetupScreen() {
           display_name: profile.display_name || '',
           city: profile.city || '',
           age: profile.age || 0,
-          phone_number: '',
+          phone_number: profile.phone || '',
           mbti: profile.mbti || '',
           pronouns: profile.pronouns || '',
           bio: profile.bio || '',
@@ -388,6 +388,7 @@ export default function ProfileSetupScreen() {
         display_name: formData.display_name.trim(),
         city: formData.city.trim(),
         age: formData.age,
+        phone: formData.phone_number.trim(), // Map form phone_number to DB phone column
         mbti: cleanOptionalValue(formData.mbti),
         pronouns: formData.pronouns.trim(),
         bio: formData.bio.trim(),
